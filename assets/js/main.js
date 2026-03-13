@@ -74,18 +74,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('contact-form');
   const formSuccess = document.getElementById('form-success');
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      // Simulate submission (replace with real backend / Formspree)
       const btn = form.querySelector('button[type=submit]');
       btn.disabled = true;
-      btn.textContent = '...';
-      setTimeout(() => {
-        form.reset();
+      btn.innerHTML = '<span class="en">Sending...</span><span class="zh">发送中...</span>';
+
+      const data = new FormData(form);
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: data,
+          headers: { 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+          form.reset();
+          if (formSuccess) formSuccess.style.display = 'block';
+          btn.innerHTML = '<span class="en">Sent ✓</span><span class="zh">已发送 ✓</span>';
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="en">Try Again</span><span class="zh">请重试</span>';
+          alert('Something went wrong. Please email us directly at nelcsingapore@gmail.com');
+        }
+      } catch (err) {
         btn.disabled = false;
-        btn.textContent = form.dataset.btnLabel || 'Send Enquiry';
-        if (formSuccess) formSuccess.style.display = 'block';
-      }, 1000);
+        btn.innerHTML = '<span class="en">Try Again</span><span class="zh">请重试</span>';
+        alert('Something went wrong. Please email us directly at nelcsingapore@gmail.com');
+      }
     });
   }
 });
