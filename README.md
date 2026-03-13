@@ -1,7 +1,7 @@
 # NELC Website — Nanyang English Language Centre
 
 **A Bigger World Through English**  
-Website for [nelc.com.sg](https://nelc.com.sg) — professional English language training in Singapore.
+Website for [https://nelcsingapore.github.io/nelc-website/](https://nelcsingapore.github.io/nelc-website/) — professional English language training in Singapore.
 
 ---
 
