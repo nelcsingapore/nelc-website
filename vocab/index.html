@@ -2716,7 +2716,7 @@ function renderAuth(){
       ${isReg ? `
       <div class="field">
         <label class="field-label">邮箱<span class="opt-tag">选填</span></label>
-        <input type="email" id="remail" placeholder="用于找回密码，可以填家长的" autocomplete="email">
+        <input type="email" id="remail" placeholder="用于找回密码" autocomplete="email">
       </div>` : ''}
       ${!isReg ? `<div class="field" style="margin-top:-8px;">
         <button class="linkbtn" id="forgotBtn">忘记密码？</button>
@@ -3380,7 +3380,7 @@ function renderDashboard(){
         <div>
           <b>这个账号还没绑定邮箱</b>
           <span>一旦忘记密码就没办法找回了 —— Firebase 的重置邮件只能发到账号绑定的邮箱。
-                绑一个就好，也可以填家长的。</span>
+                绑一个就好。</span>
         </div>
         <button class="btn btn-orange" id="bindEmail">绑定邮箱</button>
       </div>` : ''}
@@ -3482,7 +3482,7 @@ function renderDashboard(){
 
   const be = wrap.querySelector('#bindEmail');
   if(be) be.onclick = async ()=>{
-    const v = prompt('填一个能收到邮件的邮箱（可以是家长的）：\n\n绑定后，忘记密码时就能收到重置邮件。');
+    const v = prompt('填一个能收到邮件的邮箱：\n\n绑定后，忘记密码时就能收到重置邮件。');
     if(v === null) return;
     if(!isRealEmail(v)){ toast('邮箱格式不太对，再检查一下。'); return; }
     try{
