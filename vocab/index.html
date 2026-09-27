@@ -2346,8 +2346,11 @@ function openLoginCheck(){
     if(!slot) return;
     if(!CLOUD_OK){ slot.innerHTML = row('bad','数据库没法测试','Firebase 都没加载起来。'); return; }
     try{
+      /* 探测用 usernames 集合：它的规则是 allow read: if true，未登录也能读。
+         不能用 __probe__ 这种名字 —— Firestore 里双下划线开头是保留前缀，
+         查询会直接返回 invalid-argument，自检就会误报"连不上"。 */
       await Promise.race([
-        db.collection('__probe__').limit(1).get(),
+        db.collection('usernames').limit(1).get(),
         new Promise((_,rej)=>setTimeout(()=>rej({code:'deadline-exceeded'}), 8000))
       ]);
       slot.innerHTML = row('ok','Firestore 数据库连得上');
