@@ -79,7 +79,7 @@
   .btn:disabled{ opacity:.4; cursor:not-allowed; transform:none !important; }
   .btn-block{ width:100%; }
 
-  input[type=text], input[type=password]{
+  input[type=text], input[type=password], input[type=email]{
     width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid var(--line);
     font-size:15px; font-family:'Inter'; background:#FBFCFC; color:var(--ink);
   }
@@ -469,6 +469,12 @@
     border:1px solid var(--orange); padding:1px 7px; border-radius:9px;
   }
 
+  .opt-tag{
+    display:inline-block; margin-left:7px; font-size:10px; font-weight:600;
+    letter-spacing:0; text-transform:none; color:var(--ink-soft);
+    background:var(--bg); border:1px solid var(--line);
+    padding:1px 6px; border-radius:9px; vertical-align:1px;
+  }
   .field-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.5; }
 
   /* ---------- 打赏 ---------- */
@@ -2703,16 +2709,15 @@ function renderAuth(){
         <label class="field-label">${isReg ? '用户名' : '用户名或邮箱'}</label>
         <input type="text" id="uname" placeholder="${isReg?'字母或数字，例如 amy2026':'用户名，或注册时填的邮箱'}" autocomplete="username">
       </div>
-      ${isReg ? `
-      <div class="field">
-        <label class="field-label">邮箱（用于找回密码）</label>
-        <input type="email" id="remail" placeholder="不填也能注册，但密码就找不回了" autocomplete="email">
-        <div class="field-hint">填了才能在忘记密码时收到重置邮件。可以填家长的邮箱。</div>
-      </div>` : ''}
       <div class="field">
         <label class="field-label">密码</label>
         <input type="password" id="pword" placeholder="至少 6 位" autocomplete="${isReg?'new-password':'current-password'}">
       </div>
+      ${isReg ? `
+      <div class="field">
+        <label class="field-label">邮箱<span class="opt-tag">选填</span></label>
+        <input type="email" id="remail" placeholder="用于找回密码，可以填家长的" autocomplete="email">
+      </div>` : ''}
       ${!isReg ? `<div class="field" style="margin-top:-8px;">
         <button class="linkbtn" id="forgotBtn">忘记密码？</button>
       </div>` : ''}` : ''}
