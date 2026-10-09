@@ -171,6 +171,28 @@
   .teacher-row-sub{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
   .teacher-row-stats{ display:flex; gap:12px; font-size:13px; color:var(--ink-soft); white-space:nowrap; }
 
+  /* ---------- 作业 ---------- */
+  .hw-meta{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-top:16px; }
+  .hw-meta > div{ background:#FBFCFC; border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .hw-meta span{ display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); }
+  .hw-meta b{ display:block; margin-top:3px; font-size:14px; color:var(--navy); }
+  .hw-desc{ color:var(--ink-soft); font-size:13.5px; margin:14px 0 0; }
+  .hw-note{ color:var(--ink-soft); font-size:12.5px; margin:10px 0 0; line-height:1.6; }
+  .hw-asname{ color:var(--ink-soft); font-size:13.5px; margin:18px 0 10px; }
+  .hw-intro .btn-block{ margin-top:16px; }
+  .hw-link-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .hw-link-row input{ flex:1 1 260px; min-width:0; font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .hw-code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; color:var(--navy); }
+  .hw-opts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; margin-top:20px; }
+  .hw-score{ font-weight:700; font-size:14px; }
+  .hw-closed, .hw-tag-guest, .hw-tag-late{
+    display:inline-block; margin-left:7px; font-size:10px; font-weight:600;
+    padding:1px 6px; border-radius:9px; vertical-align:1px; letter-spacing:0;
+  }
+  .hw-closed{ background:var(--line); color:var(--ink-soft); }
+  .hw-tag-guest{ background:var(--bg); border:1px solid var(--line); color:var(--ink-soft); }
+  .hw-tag-late{ background:#FDEDE3; color:var(--orange); }
+
   /* ---------- Dashboard ---------- */
   .grid-2{ display:grid; grid-template-columns: 1.3fr 1fr; gap:20px; }
   @media (max-width:720px){ .grid-2{ grid-template-columns:1fr; } }
@@ -1992,6 +2014,9 @@ let state = {
   dictCfg: { scope:'current', sid:null, bi:0, ui:0, mode:'audio', count:20, hint:false },
   // 教师
   teacherStudents: [], teacherSelected: null, teacherProfile: null, rankMode: 'learned',
+  // 作业
+  hw: null, hwName: '', hwDone: {}, hwList: [], hwCounts: {}, hwSel: null,
+  hwSubs: null, hwDraft: null, hwLoading: false, hwSubmitState: null,
   // 其他
   pickerOpen: false
 };
@@ -2269,6 +2294,8 @@ async function enterAppWithProfile(p){
     state.screen = 'teacherList';
     return;
   }
+  // 手里还捏着一份作业（比如刚才是为了交作业才去登录的），先把作业做完
+  if(state.hw){ state.screen = 'hwIntro'; return; }
   state.screen = prof.sid ? 'dashboard' : 'welcome';
 }
 
@@ -2617,6 +2644,10 @@ function render(){
     case 'dictRun':        el = renderDictRun(); break;
     case 'dictResult':     el = renderDictResult(); break;
     case 'importBook':     el = renderImportBook(); break;
+    case 'hwIntro':        el = renderHwIntro(); break;
+    case 'hwList':         el = renderHwList(); break;
+    case 'hwNew':          el = renderHwNew(); break;
+    case 'hwDetail':       el = renderHwDetail(); break;
     case 'teacherList':    el = renderTeacherList(); break;
     case 'teacherDetail':  el = renderTeacherDetail(); break;
     default:               el = renderAuth();
@@ -2733,6 +2764,7 @@ function renderAuth(){
       <button class="btn btn-outline btn-block" id="guestBtn">
         ${resumeGuest ? '继续上次的访客练习 →' : '直接开始练，不用注册 →'}
       </button>
+      <button class="btn-ghost btn-block" id="hwCodeAuth" style="margin-top:10px;">📋 我有作业码</button>
       ${resumeGuest ? `<p class="guest-resume">这台设备上有访客记录：学过 ${resumeStats.learned} 个词${resumeStats.dSeen?` · 听写 ${resumeStats.dOk}/${resumeStats.dSeen}`:''}</p>` : ''}
 
       ${ACCOUNTS_ENABLED ? `
@@ -2752,6 +2784,7 @@ function renderAuth(){
   wrap.querySelectorAll('.tab').forEach(t=>{
     t.onclick = ()=>{ state.authMode = t.dataset.mode; state.errorMsg = ''; render(); };
   });
+  wrap.querySelector('#hwCodeAuth').onclick = promptHomeworkCode;
   // 账号功能关掉时这些元素根本不存在，绑定前都要先判空
   const on = (sel, fn)=>{ const el = wrap.querySelector(sel); if(el) el.onclick = fn; };
 
@@ -3429,6 +3462,7 @@ function renderDashboard(){
           <button class="btn btn-outline" id="pickBtn">📑 选择单元 / 换词书</button>
           <button class="btn btn-outline" id="levelBtn">🎚️ 调整我的起点等级</button>
           <button class="btn btn-outline" id="notebookBtn">📖 我的单词本</button>
+          <button class="btn btn-outline" id="hwCodeBtn">📋 我有作业码</button>
         </div>
       </div>
 
@@ -3476,6 +3510,7 @@ function renderDashboard(){
   wrap.querySelector('#pickBtn').onclick = ()=>{ state.pickerOpen = true; openUnitPicker(); };
   wrap.querySelector('#levelBtn').onclick = ()=>{ state.screen = 'levelPick'; render(); };
   wrap.querySelector('#notebookBtn').onclick = ()=>{ state.screen = 'notebook'; render(); };
+  wrap.querySelector('#hwCodeBtn').onclick = promptHomeworkCode;
   wrap.querySelector('#retestBtn').onclick = ()=>startVocabTest();
   const t2 = wrap.querySelector('#tipLink2');
   if(t2) t2.onclick = openTipSheet;
@@ -4312,10 +4347,30 @@ async function finishDictation(){
   const newStreak = p.streak !== streakBefore && STREAK_MILESTONES.includes(p.streak);
   const allRight = d.results.length >= 5 && correct === d.results.length;
 
-  state.dictResult = { ...entry, results: d.results, allRight, newStreak };
+  state.dictResult = { ...entry, results: d.results, allRight, newStreak, hw: d.hw || null };
   await saveProfile(p);
   state.screen = 'dictResult';
-  render();
+
+  /* 作业要交到云端。交失败不能把学生挡在结果页外面 —— 练习本身已经记进档案了，
+     这里丢的只是"老师能看到"这一层，所以先存本地，下次打开再补交。 */
+  if(d.hw){
+    state.hwSubmitState = 'sending';
+    render();
+    const sub = buildSubmission(state.hw || { code: d.hw.code }, entry, d.results, d.hw.name, p);
+    try{
+      await writeSubmission(sub);
+      state.hwSubmitState = 'ok';
+      state.hwDone = { ...(state.hwDone||{}), [sub.code]: { correct: sub.correct, total: sub.total } };
+    }catch(err){
+      stashPendingHw(sub);
+      state.hwSubmitState = 'pending';
+      console.warn('作业提交失败，已暂存本地：', err);
+    }
+    render();
+  } else {
+    state.hwSubmitState = null;
+    render();
+  }
   if(allRight) celebrate('全对！', `${correct} 题一个没错`, true);
   else if(newStreak) celebrate(`连续学习 ${p.streak} 天`, '坚持住', true);
 }
@@ -4324,9 +4379,14 @@ function renderDictResult(){
   const r = state.dictResult;
   const rate = pct(r.correct, r.total);
   const wrongs = r.results.filter(x=>!x.correct);
+  const hwBanner = !r.hw ? '' : (
+      state.hwSubmitState === 'sending' ? `<div class="rec-box" style="margin:0 0 16px;">正在把成绩交给老师…</div>`
+    : state.hwSubmitState === 'pending' ? `<div class="warn-box" style="margin:0 0 16px;"><b>成绩还没交上去</b> —— 网络没通。先别清浏览器数据，下次打开这个网页会自动补交。</div>`
+    : `<div class="rec-box" style="margin:0 0 16px;">✅ 已提交给${esc((state.hw&&state.hw.teacherName)||'老师')} —— 作业「${esc(r.hw.title||r.hw.code)}」，${r.correct}/${r.total}。</div>`);
   const wrap = document.createElement('div');
   wrap.innerHTML = `
     <div class="card">
+      ${hwBanner}
       <div style="text-align:center;">
         <div class="big" style="font-size:52px;">${rate>=90?'🏆':rate>=70?'👍':'💪'}</div>
         <h2 style="margin:4px 0;">听写完成</h2>
@@ -4359,7 +4419,7 @@ function renderDictResult(){
 
       <div class="dict-result-actions">
         ${wrongs.length ? `<button class="btn btn-orange" id="retryWrong">只练这 ${wrongs.length} 个错词</button>` : ''}
-        <button class="btn btn-outline" id="again">再来一组</button>
+        <button class="btn btn-outline" id="again">${r.hw ? '重做这份作业' : '再来一组'}</button>
         <button class="btn btn-primary" id="home">返回主页</button>
       </div>
     </div>`;
@@ -4370,8 +4430,14 @@ function renderDictResult(){
     const words = wrongs.map(x=>findWord(x.w)).filter(Boolean);
     startDictation(words, state.dict.mode, `错词重练 · ${r.label}`);
   };
-  wrap.querySelector('#again').onclick = ()=>{ state.screen = 'dictSetup'; render(); };
-  wrap.querySelector('#home').onclick = ()=>{ state.screen = 'dashboard'; render(); };
+  wrap.querySelector('#again').onclick = ()=>{
+    if(r.hw && state.hw){ startHomework(state.hw); return; }   // 重做会覆盖上次的成绩
+    state.screen = 'dictSetup'; render();
+  };
+  wrap.querySelector('#home').onclick = ()=>{
+    state.hw = null; state.hwSubmitState = null;
+    state.screen = 'dashboard'; render();
+  };
   return wrap;
 }
 
@@ -4672,6 +4738,7 @@ function renderTeacherList(){
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
         <h2 style="margin:0;">教师视图 · 全部学生 (${state.teacherStudents.length})</h2>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-orange" id="hwBtn">📋 作业</button>
           <button class="btn-ghost" id="importBtn">📥 导入词汇书</button>
           <button class="btn-ghost" id="csvBtn">⬇️ 导出 CSV</button>
           <button class="btn-ghost" id="teacherExit">退出登录</button>
@@ -4715,6 +4782,7 @@ function renderTeacherList(){
     state.teacherProfile = null; state.teacherStudents = []; state.profile = null;
     state.screen = 'auth'; render();
   };
+  wrap.querySelector('#hwBtn').onclick = openTeacherHwList;
   wrap.querySelector('#importBtn').onclick = ()=>{ state.screen = 'importBook'; render(); };
   wrap.querySelector('#csvBtn').onclick = exportTeacherCsv;
   return wrap;
@@ -4731,6 +4799,661 @@ function renderTeacherDetail(){
     onExtra: exportStudentCsv,
     onBack: ()=>{ state.screen = 'teacherList'; render(); }
   });
+}
+
+/* =========================================================
+   作业
+   老师出一份固定题目的听写，生成一个带作业码的链接；学生点链接直接做，
+   做完自动交到云端；老师在教师视图里看全班提交情况和错词分布。
+
+   设计上的三个取舍：
+   1. 题目在「布置的那一刻」就抽好、整份存进 assignments 文档 ——
+      不能存"范围+题量"让学生端临时抽，否则每人题目不同，分数没法比。
+   2. 不登录也能做（名字自己填）。她的学生很多不会专门注册，
+      要求注册会直接把交作业率打下去。老师可以逐份作业改成"必须登录"。
+   3. 一个学生一份提交（文档 ID 就是 uid），重做覆盖旧的，
+      老师名单里不会出现同一个人好几行。访客的提交用随机 ID，各算各的。
+   ========================================================= */
+
+// 去掉 I/1/O/0 这些手抄容易认错的字符 —— 作业码经常是口头念或手写给学生的
+const HW_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function newHwCode(){
+  let s = '';
+  const buf = new Uint32Array(6);
+  try{ crypto.getRandomValues(buf); }catch(e){ for(let i=0;i<6;i++) buf[i] = Math.floor(Math.random()*4294967296); }
+  for(let i=0;i<6;i++) s += HW_CHARS[buf[i] % HW_CHARS.length];
+  return s;
+}
+function cleanHwCode(v){ return String(v||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); }
+
+function hwLink(code){
+  const base = location.origin + location.pathname;
+  return base + '#hw=' + code;
+}
+// 链接可能被微信/QQ 改写，所以 hash 和 query 两种都认
+function readHwCodeFromUrl(){
+  try{
+    const h = String(location.hash||'').replace(/^#/,'');
+    let m = h.match(/(?:^|&)hw=([A-Za-z0-9]+)/);
+    if(m) return cleanHwCode(m[1]);
+    m = String(location.search||'').match(/[?&]hw=([A-Za-z0-9]+)/);
+    if(m) return cleanHwCode(m[1]);
+  }catch(e){}
+  return '';
+}
+function clearHwFromUrl(){
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+}
+
+const HW_COL = 'assignments';
+async function fetchAssignment(code){
+  requireCloud();
+  const snap = await dbRetry(()=>db.collection(HW_COL).doc(code).get());
+  return snap.exists ? snap.data() : null;
+}
+async function putAssignment(a){
+  requireCloud();
+  await dbRetry(()=>db.collection(HW_COL).doc(a.code).set(a));
+}
+async function listAssignments(teacherUid){
+  requireCloud();
+  const snap = await dbRetry(()=>db.collection(HW_COL).where('teacherUid','==',teacherUid).get());
+  return snap.docs.map(d=>d.data())
+    .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+}
+// 哪一份更新：先看"第几次做"，没有这个字段的老记录再退回比时间
+function newerThan(a, b){
+  const ta = +a.attempt || 0, tb = +b.attempt || 0;
+  if(ta !== tb) return ta > tb;
+  return String(a.submittedAt||'') > String(b.submittedAt||'');
+}
+async function loadSubmissions(code){
+  requireCloud();
+  const snap = await dbRetry(()=>db.collection(HW_COL).doc(code).collection('submissions').get());
+  const all = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  // 同一个人可能交了好几次（访客重做）：按人合并，只留最后一次，并记下交了几次
+  const byPerson = {};
+  all.forEach(sb=>{
+    const key = sb.uid || ('name:' + String(sb.name||'').trim().toLowerCase());
+    const cur = byPerson[key];
+    if(!cur || newerThan(sb, cur)){
+      byPerson[key] = { ...sb, attempts: (cur ? cur.attempts : 0) + 1 };
+    } else {
+      cur.attempts += 1;
+    }
+  });
+  return Object.values(byPerson)
+    .sort((a,b)=>(b.correct/Math.max(1,b.total)) - (a.correct/Math.max(1,a.total)));
+}
+
+/* 提交。即使云端写失败也不把学生卡住 —— 本地先存一份，
+   练习本身已经记进档案了，丢的只是"老师能看到"这一层。 */
+const HW_PENDING_KEY = 'nelc_hw_pending';
+function stashPendingHw(sub){
+  try{
+    const all = JSON.parse(localStorage.getItem(HW_PENDING_KEY) || '[]');
+    all.push(sub);
+    localStorage.setItem(HW_PENDING_KEY, JSON.stringify(all.slice(-20)));
+  }catch(e){}
+}
+async function flushPendingHw(){
+  let all = [];
+  try{ all = JSON.parse(localStorage.getItem(HW_PENDING_KEY) || '[]'); }catch(e){ return; }
+  if(!all.length || !CLOUD_OK) return;
+  const left = [];
+  for(const s of all){
+    try{ await writeSubmission(s); }catch(e){ left.push(s); }
+  }
+  try{ localStorage.setItem(HW_PENDING_KEY, JSON.stringify(left)); }catch(e){}
+}
+
+/* 访客每次提交都用一个新 ID。
+   本来想让访客复用同一个 ID、重做时覆盖，但安全规则没办法验证"这份确实是你交的"
+   —— 复用 ID 就等于允许任何人改任何一份访客提交。所以规则里访客只能 create，
+   重做就多一条记录，由教师视图按名字合并、只显示最后一次。 */
+function newGuestSubId(){
+  return 'g' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-5);
+}
+/* 第几次做这份作业。本来只按提交时间排"最后一次"，但时间戳只精确到毫秒，
+   同一毫秒内的两次提交分不出先后，合并时就可能把旧成绩当成最新的。
+   这个计数器存在本机，重做的场景（同一台设备同一个人）正好覆盖得住。 */
+const HW_ATTEMPT_KEY = code=>'nelc_hw_try_' + code;
+function nextHwAttempt(code){
+  let n = 0;
+  try{ n = parseInt(localStorage.getItem(HW_ATTEMPT_KEY(code)) || '0', 10) || 0; }catch(e){}
+  n += 1;
+  try{ localStorage.setItem(HW_ATTEMPT_KEY(code), String(n)); }catch(e){}
+  return n;
+}
+async function writeSubmission(sub){
+  requireCloud();
+  await dbRetry(()=>db.collection(HW_COL).doc(sub.code).collection('submissions').doc(sub.subId).set(sub));
+}
+function buildSubmission(a, entry, results, name, p){
+  const signedIn = !!(p && p.uid && p.uid !== 'guest' && !p.isGuest);
+  return {
+    code: a.code,
+    subId: signedIn ? p.uid : newGuestSubId(),
+    uid: signedIn ? p.uid : null,
+    name: String(name || (p && p.username) || '匿名').slice(0, 40),
+    isGuest: !signedIn,
+    total: entry.total, correct: entry.correct, secs: entry.secs,
+    // 只存判卷需要的字段，别把整个词条塞进去（一份作业几十题，文档会很大）
+    results: results.slice(0, 200).map(r=>({
+      w: String(r.w||'').slice(0,40),
+      input: String(r.input==null?'':r.input).slice(0,60),
+      correct: !!r.correct,
+      kind: r.kind === 'choice' ? 'choice' : 'spell'
+    })),
+    attempt: nextHwAttempt(a.code),
+    submittedAt: new Date().toISOString()
+  };
+}
+
+/* ---------- 学生端：作业说明页 ---------- */
+function renderHwIntro(){
+  const a = state.hw;
+  const p = state.profile;
+  const overdue = a.due && todayStr() > a.due;
+  const needLogin = a.requireLogin && (!p || p.isGuest);
+  const already = state.hwDone && state.hwDone[a.code];
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="hero" style="padding-bottom:10px;">
+      <div class="eyebrow">作业 · ${esc(a.code)}</div>
+      <h1 style="margin-bottom:6px;">${esc(a.title || '听写作业')}</h1>
+      <p class="sub">${esc(a.teacherName || '老师')} 布置 · ${a.words.length} 题 · ${esc(DICT_MODES[a.mode] ? DICT_MODES[a.mode].label : a.mode)}</p>
+    </div>
+    <div class="card hw-intro">
+      <div class="hw-meta">
+        <div><span>题型</span><b>${DICT_MODES[a.mode]?DICT_MODES[a.mode].icon:''} ${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}</b></div>
+        <div><span>题量</span><b>${a.words.length} 题</b></div>
+        <div><span>范围</span><b>${esc(a.scopeLabel || '—')}</b></div>
+        <div><span>截止</span><b>${a.due ? esc(a.due) : '不限'}</b></div>
+      </div>
+      <p class="hw-desc">${esc(DICT_MODES[a.mode] ? DICT_MODES[a.mode].desc : '')}${a.hint ? ' · 允许看提示' : ''}</p>
+
+      ${!a.open ? `<div class="warn-box">这份作业已经被老师关闭了，不能再提交。</div>` : ''}
+      ${overdue ? `<div class="warn-box">已经过了截止日期（${esc(a.due)}）—— 还是可以做，但老师那边会显示迟交。</div>` : ''}
+      ${already ? `<div class="rec-box">你已经交过一次了（${already.correct}/${already.total}）。再做一次会覆盖上次的成绩。</div>` : ''}
+
+      ${needLogin ? `
+        <div class="warn-box">这份作业要求登录后提交，老师才能确认是谁做的。请先登录或注册。</div>
+        <button class="btn btn-primary btn-block" id="hwLogin">去登录 / 注册</button>
+      ` : `
+        ${(!p || p.isGuest) ? `
+          <div class="field" style="margin-top:18px;">
+            <label class="field-label">你的名字<span class="opt-tag">老师按这个认人</span></label>
+            <input type="text" id="hwName" placeholder="写上课用的名字，例如 林小雨" value="${esc(state.hwName||'')}" maxlength="20">
+          </div>` : `
+          <p class="hw-asname">将以 <b>${esc(p.username)}</b> 的身份提交。</p>`}
+        <button class="btn btn-orange btn-block" id="hwStart" ${a.open?'':'disabled'}>开始作业 →</button>
+        ${(!p || p.isGuest) ? `<p class="hw-note">不用注册也能交。想让进度长期保存、换设备也能看，可以之后再注册。</p>` : ''}
+      `}
+      <button class="btn-ghost btn-block" id="hwSkip" style="margin-top:12px;">先不做，去自由练习</button>
+    </div>`;
+
+  const nameEl = wrap.querySelector('#hwName');
+  if(nameEl) nameEl.oninput = ()=>{ state.hwName = nameEl.value; };
+
+  const lg = wrap.querySelector('#hwLogin');
+  if(lg) lg.onclick = ()=>{ state.screen = 'auth'; render(); };
+
+  const go = wrap.querySelector('#hwStart');
+  if(go) go.onclick = ()=>{
+    if((!p || p.isGuest)){
+      const n = (state.hwName||'').trim();
+      if(n.length < 1){ toast('先写一下名字，不然老师不知道是谁交的。'); if(nameEl) nameEl.focus(); return; }
+    }
+    startHomework(a);
+  };
+  wrap.querySelector('#hwSkip').onclick = ()=>{
+    state.hw = null; clearHwFromUrl();
+    state.screen = state.profile ? 'dashboard' : 'auth';
+    render();
+  };
+  return wrap;
+}
+
+function startHomework(a){
+  const p = state.profile;
+  const name = (p && !p.isGuest) ? p.username : (state.hwName||'').trim();
+  // 题目顺序每人打乱，但题目本身是同一批
+  const words = shuffle(a.words.slice());
+  state.dictCfg = { ...state.dictCfg, hint: !!a.hint };
+  startDictation(words, a.mode, `作业 · ${a.title || a.code}`);
+  if(state.dict) state.dict.hw = { code: a.code, title: a.title, name };
+}
+
+/* 学生进入作业：没有档案就先建一个访客档案，不让作业链接卡在登录页 */
+async function openHomework(code, opts){
+  const quiet = opts && opts.quiet;
+  try{
+    const a = await fetchAssignment(code);
+    if(!a){ if(!quiet) toast('没找到这个作业码，跟老师核对一下。'); return false; }
+    if(!a.words || !a.words.length){ if(!quiet) toast('这份作业没有题目，可能老师还没出完。'); return false; }
+    if(!state.profile){
+      const g = loadGuestProfile() || newGuestProfile();
+      g.isGuest = true;
+      setGuestActive(true); saveGuestProfile(g);
+      state.profile = migrateProfile(g);
+    }
+    if(!state.hwName && state.profile && state.profile.isGuest && state.profile.username !== '访客'){
+      state.hwName = state.profile.username;
+    }
+    state.hw = a;
+    state.screen = 'hwIntro';
+    return true;
+  }catch(err){
+    if(!quiet) toast('读取作业失败：' + friendlyDbError(err));
+    return false;
+  }
+}
+
+function promptHomeworkCode(){
+  const v = prompt('输入老师给的作业码（6 位字母数字）：');
+  if(v === null) return;
+  const code = cleanHwCode(v);
+  if(code.length < 4){ toast('作业码不太对，再核对一下。'); return; }
+  openHomework(code).then(ok=>{ if(ok) render(); });
+}
+
+/* ---------- 教师端：作业列表 ---------- */
+function renderHwList(){
+  const wrap = document.createElement('div');
+  const list = state.hwList || [];
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="session-head" style="margin:0 0 6px;">
+        <h2 style="margin:0;">📋 作业 (${list.length})</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-orange" id="hwNewBtn">+ 布置新作业</button>
+          <button class="btn-ghost" id="hwBack">← 返回学生列表</button>
+        </div>
+      </div>
+      <p style="color:var(--ink-soft); font-size:13.5px;">
+        布置后会生成一个链接，发给学生就行。学生不用注册也能做，做完这里能看到每个人的成绩和错词。
+      </p>
+      ${state.hwLoading ? `<p style="color:var(--ink-soft);">读取中…</p>` : (list.length ? `
+        <div class="teacher-list">
+          ${list.map(a=>`
+            <div class="teacher-row" data-code="${esc(a.code)}">
+              <div class="teacher-row-main">
+                <div class="teacher-row-name">${esc(a.title || '听写作业')} ${a.open?'':'<span class="hw-closed">已关闭</span>'}</div>
+                <div class="teacher-row-sub">
+                  ${esc(a.code)} · ${a.words?a.words.length:0} 题 · ${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}
+                  ${a.due?` · 截止 ${esc(a.due)}`:''} · 布置于 ${esc(String(a.createdAt||'').slice(0,10))}
+                </div>
+              </div>
+              <div class="teacher-row-stats"><span>${(state.hwCounts&&state.hwCounts[a.code]!=null)?state.hwCounts[a.code]+' 份提交':'查看 →'}</span></div>
+            </div>`).join('')}
+        </div>` : `<p style="color:var(--ink-soft); margin-top:20px;">还没有布置过作业。点右上角开始。</p>`)}
+    </div>`;
+
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'teacherList'; render(); };
+  wrap.querySelector('#hwNewBtn').onclick = ()=>{
+    const p = state.teacherProfile;
+    state.hwDraft = {
+      title: '', due: '', requireLogin: false,
+      scope: 'unit', sid: (allSeries()[0]||{}).id, bi: 0, ui: 0,
+      mode: 'audio', count: 20, hint: false
+    };
+    state.screen = 'hwNew'; render();
+  };
+  wrap.querySelectorAll('.teacher-row').forEach(row=>{
+    row.onclick = ()=>openHwDetail(row.dataset.code);
+  });
+  return wrap;
+}
+
+async function openTeacherHwList(){
+  state.hwLoading = true; state.screen = 'hwList'; render();
+  try{
+    state.hwList = await listAssignments(state.teacherProfile.uid);
+    // 提交份数单独拉，列表页只显示数字，点进去才读明细
+    state.hwCounts = {};
+    for(const a of state.hwList){
+      try{ state.hwCounts[a.code] = (await loadSubmissions(a.code)).length; }catch(e){}
+    }
+  }catch(err){
+    toast('读取作业失败：' + friendlyDbError(err));
+    state.hwList = [];
+  }
+  state.hwLoading = false; render();
+}
+
+async function openHwDetail(code){
+  state.hwSel = (state.hwList||[]).find(a=>a.code === code) || await fetchAssignment(code);
+  state.hwSubs = null;
+  state.screen = 'hwDetail'; render();
+  try{ state.hwSubs = await loadSubmissions(code); }
+  catch(err){ state.hwSubs = []; toast('读取提交失败：' + friendlyDbError(err)); }
+  render();
+}
+
+/* ---------- 教师端：布置新作业 ---------- */
+function renderHwNew(){
+  const d = state.hwDraft;
+  const s = getSeries(d.sid);
+  if(!s.books[d.bi]) d.bi = 0;
+  const units = (s.books[d.bi] || { units:[] }).units;
+  if(d.ui >= units.length) d.ui = 0;
+  const rawPool = hwDraftWords(d);
+  const pool = d.mode === 'sent' ? rawPool.filter(sentEligible) : rawPool;
+  const ttsOk = TTS.supported();
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="session-head">
+      <h2 style="margin:0;">布置新作业</h2>
+      <button class="btn-ghost" id="hwBack">← 返回作业列表</button>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label class="field-label">作业名称</label>
+        <input type="text" id="hwTitle" placeholder="例如：第 3 单元听写" value="${esc(d.title)}" maxlength="40">
+      </div>
+
+      <label class="field-label" style="margin-top:4px;">出哪些词</label>
+      <div class="chip-row">
+        <button class="chip ${d.scope==='unit'?'chip-on':''}" data-scope="unit">指定单元</button>
+        <button class="chip ${d.scope==='book'?'chip-on':''}" data-scope="book">整册</button>
+      </div>
+      <div class="chip-row" style="margin-top:10px;">
+        ${allSeries().map(x=>`<button class="chip ${x.id===d.sid?'chip-on':''}" data-sid="${esc(x.id)}">${esc(x.icon||'📗')} ${esc(x.short)}</button>`).join('')}
+      </div>
+      <div class="chip-row" style="margin-top:8px;">
+        ${s.books.map((b,i)=>`<button class="chip ${i===d.bi?'chip-on':''}" data-bi="${i}">${esc(b.label)}</button>`).join('')}
+      </div>
+      ${d.scope==='unit' ? `
+        <label class="field-label" style="margin-top:18px;">单元</label>
+        <div class="unit-grid">
+          ${units.map((u,ui)=>`
+            <button class="unit-cell ${ui===d.ui?'unit-current':''}" data-ui="${ui}" title="${esc(u.t)}">
+              <span class="unit-cell-n">${ui+1}</span><span class="unit-cell-t">${esc(u.t)}</span>
+            </button>`).join('')}
+        </div>` : ''}
+
+      <label class="field-label" style="margin-top:18px;">题型</label>
+      ${MODE_GROUPS.map(g=>`
+        <div class="mode-group">
+          <div class="mode-group-head">${esc(g.title)}<span>${esc(g.hint)}</span></div>
+          <div class="chip-row">
+            ${g.keys.filter(k=>k!=='mix').map(k=>{
+              const v = DICT_MODES[k];
+              return `<button class="chip ${d.mode===k?'chip-on':''}" data-mode="${k}" title="${esc(v.desc)}">${v.icon} ${esc(v.label)}</button>`;
+            }).join('')}
+          </div>
+        </div>`).join('')}
+      ${!ttsOk ? `<div class="warn-box">这台设备不支持语音朗读，你没法试听 —— 但学生那边只要设备支持就能正常播放。</div>` : ''}
+
+      <label class="field-label" style="margin-top:18px;">题量</label>
+      <div class="chip-row">
+        ${[10,15,20,30].map(n=>`<button class="chip ${d.count===n?'chip-on':''}" data-count="${n}" ${pool.length<n?'disabled':''}>${n} 题</button>`).join('')}
+        <button class="chip ${d.count==='all'?'chip-on':''}" data-count="all" ${pool.length>60?'disabled':''}>全部 (${pool.length})</button>
+      </div>
+      ${pool.length>60 && d.count==='all' ? '' : ''}
+
+      <div class="hw-opts">
+        <div class="field">
+          <label class="field-label">截止日期<span class="opt-tag">选填</span></label>
+          <input type="date" id="hwDue" value="${esc(d.due)}">
+        </div>
+        <div>
+          <label class="field-label">提交方式</label>
+          <div class="chip-row">
+            <button class="chip ${d.requireLogin?'':'chip-on'}" data-req="0">不用注册也能交</button>
+            <button class="chip ${d.requireLogin?'chip-on':''}" data-req="1">必须登录后交</button>
+          </div>
+          <p class="hw-note" style="margin-top:8px;">${d.requireLogin
+            ? '成绩会记到学生账号上，身份确定；但没注册的学生交不了。'
+            : '学生点链接填个名字就能做，交作业率最高；名字是自己填的，重名要留意。'}</p>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <button class="chip ${d.hint?'chip-on':''}" id="hwHint">💡 允许学生看提示</button>
+      </div>
+
+      <div class="setup-foot">
+        <div style="color:var(--ink-soft); font-size:13px;">可选词数：<b>${pool.length}</b>${
+          d.mode==='sent' && rawPool.length!==pool.length ? `（${rawPool.length} 词里 ${pool.length} 个有课本例句）` : ''}</div>
+        <button class="btn btn-orange" id="hwCreate" ${pool.length<4?'disabled':''}>生成作业链接 →</button>
+      </div>
+      ${pool.length<4 ? `<p style="color:var(--ink-soft); font-size:13px; margin-top:10px;">这个范围里能出的题太少（至少要 4 个词），换个范围或题型。</p>` : ''}
+    </div>`;
+
+  const upd = fn=>{ fn(); render(); };
+  const t = wrap.querySelector('#hwTitle');
+  t.oninput = ()=>{ d.title = t.value; };
+  const due = wrap.querySelector('#hwDue');
+  due.onchange = ()=>{ d.due = due.value; };
+  wrap.querySelectorAll('[data-scope]').forEach(b=>b.onclick = ()=>upd(()=>{ d.scope = b.dataset.scope; }));
+  wrap.querySelectorAll('[data-sid]').forEach(b=>b.onclick = ()=>upd(()=>{ d.sid = b.dataset.sid; d.bi = 0; d.ui = 0; }));
+  wrap.querySelectorAll('[data-bi]').forEach(b=>b.onclick = ()=>upd(()=>{ d.bi = +b.dataset.bi; d.ui = 0; }));
+  wrap.querySelectorAll('[data-ui]').forEach(b=>b.onclick = ()=>upd(()=>{ d.ui = +b.dataset.ui; }));
+  wrap.querySelectorAll('[data-mode]').forEach(b=>b.onclick = ()=>upd(()=>{ d.mode = b.dataset.mode; }));
+  wrap.querySelectorAll('[data-count]').forEach(b=>b.onclick = ()=>upd(()=>{
+    d.count = b.dataset.count === 'all' ? 'all' : +b.dataset.count;
+  }));
+  wrap.querySelectorAll('[data-req]').forEach(b=>b.onclick = ()=>upd(()=>{ d.requireLogin = b.dataset.req === '1'; }));
+  wrap.querySelector('#hwHint').onclick = ()=>upd(()=>{ d.hint = !d.hint; });
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'hwList'; render(); };
+  wrap.querySelector('#hwCreate').onclick = ()=>createAssignment(wrap);
+  return wrap;
+}
+
+function hwDraftWords(d){
+  if(d.scope === 'book') return bookWords(d.sid, d.bi);
+  return unitWords(d.sid, d.bi, d.ui);
+}
+
+async function createAssignment(wrap){
+  const d = state.hwDraft;
+  const tp = state.teacherProfile;
+  const s = getSeries(d.sid);
+  const raw = hwDraftWords(d);
+  const pool = d.mode === 'sent' ? raw.filter(sentEligible) : raw;
+  const n = d.count === 'all' ? pool.length : Math.min(d.count, pool.length);
+  if(n < 4){ toast('能出的题太少了。'); return; }
+
+  const scopeLabel = d.scope === 'book'
+    ? `${s.short} · ${s.books[d.bi].label}`
+    : `${s.books[d.bi].label} · ${s.books[d.bi].units[d.ui].t}`;
+
+  // 题目现在就定下来，存进文档。学生端不再抽题，保证全班同题。
+  const words = sample(pool, n).map(w=>({
+    w: w.w, cn: w.cn || '', ipa: w.ipa || '', pos: w.pos || '',
+    def: w.def || '', ex: w.ex || '', sid: w.sid || d.sid
+  }));
+
+  const a = {
+    code: newHwCode(),
+    teacherUid: tp.uid,
+    teacherName: tp.username || '老师',
+    title: (d.title || '').trim() || scopeLabel,
+    mode: d.mode, hint: !!d.hint,
+    scopeLabel,
+    requireLogin: !!d.requireLogin,
+    due: d.due || null,
+    open: true,
+    words,
+    createdAt: new Date().toISOString()
+  };
+
+  const btn = wrap.querySelector('#hwCreate');
+  btn.disabled = true; btn.textContent = '生成中…';
+  try{
+    await putAssignment(a);
+    state.hwList = [a].concat(state.hwList || []);
+    state.hwCounts = { ...(state.hwCounts||{}), [a.code]: 0 };
+    state.hwSel = a; state.hwSubs = [];
+    state.screen = 'hwDetail'; render();
+    toast('作业已生成，把链接发给学生就行。');
+  }catch(err){
+    btn.disabled = false; btn.textContent = '生成作业链接 →';
+    toast('生成失败：' + friendlyDbError(err));
+  }
+}
+
+/* ---------- 教师端：单份作业的提交情况 ---------- */
+function renderHwDetail(){
+  const a = state.hwSel;
+  const subs = state.hwSubs;
+  const link = hwLink(a.code);
+  const wrap = document.createElement('div');
+
+  // 全班错词统计：哪个词最多人错 —— 这才是作业真正要告诉老师的事
+  const miss = {};
+  (subs||[]).forEach(sb=>{
+    (sb.results||[]).forEach(r=>{
+      if(r.correct) return;
+      const m = miss[r.w] = miss[r.w] || { w:r.w, n:0, samples:[] };
+      m.n++;
+      if(r.kind !== 'choice' && r.input) m.samples.push(`${sb.name}: ${r.input}`);
+    });
+  });
+  const topMiss = Object.values(miss).sort((x,y)=>y.n - x.n);
+  const done = (subs||[]).length;
+  const avg = done ? Math.round((subs.reduce((s,x)=>s + x.correct/Math.max(1,x.total), 0) / done) * 100) : null;
+
+  wrap.innerHTML = `
+    <div class="session-head">
+      <h2 style="margin:0;">${esc(a.title || '听写作业')}</h2>
+      <button class="btn-ghost" id="hwBack">← 返回作业列表</button>
+    </div>
+
+    <div class="card">
+      <label class="field-label">把这个链接发给学生</label>
+      <div class="hw-link-row">
+        <input type="text" id="hwLinkBox" readonly value="${esc(link)}">
+        <button class="btn btn-primary" id="hwCopy">复制链接</button>
+      </div>
+      <p class="hw-note">学生点开就能直接做，不用注册。链接发不出去的话，让他们在首页点「我有作业码」，输入 <b class="hw-code">${esc(a.code)}</b>。</p>
+
+      <div class="hw-meta" style="margin-top:18px;">
+        <div><span>题型</span><b>${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}</b></div>
+        <div><span>题量</span><b>${a.words.length} 题</b></div>
+        <div><span>范围</span><b>${esc(a.scopeLabel||'—')}</b></div>
+        <div><span>截止</span><b>${a.due?esc(a.due):'不限'}</b></div>
+        <div><span>已交</span><b>${subs===null?'…':done + ' 份'}</b></div>
+        <div><span>平均分</span><b>${avg===null?'—':avg + '%'}</b></div>
+      </div>
+
+      <div class="chip-row" style="margin-top:16px;">
+        <button class="chip ${a.open?'chip-on':''}" id="hwToggle">${a.open?'✅ 开放提交中 · 点此关闭':'🔒 已关闭 · 点此重新开放'}</button>
+        <button class="chip" id="hwCsv" ${done?'':'disabled'}>⬇️ 导出成绩 CSV</button>
+      </div>
+    </div>
+
+    ${subs === null ? `<div class="card"><p style="color:var(--ink-soft); margin:0;">读取提交情况…</p></div>` : `
+    <div class="card">
+      <h3 style="margin-top:0;">提交情况 (${done})</h3>
+      ${done ? `
+        <div class="teacher-list">
+          ${subs.map(sb=>{
+            const rate = pct(sb.correct, sb.total);
+            const late = a.due && String(sb.submittedAt||'').slice(0,10) > a.due;
+            return `<div class="teacher-row hw-sub-row" data-sub="${esc(sb.id)}">
+              <div class="teacher-row-main">
+                <div class="teacher-row-name">${esc(sb.name)}${sb.isGuest?'<span class="hw-tag-guest">未登录</span>':''}${late?'<span class="hw-tag-late">迟交</span>':''}</div>
+                <div class="teacher-row-sub">${esc(String(sb.submittedAt||'').slice(0,16).replace('T',' '))} · 用时 ${Math.round((sb.secs||0)/60)} 分钟${sb.attempts>1?` · 做了 ${sb.attempts} 次`:''}</div>
+              </div>
+              <div class="teacher-row-stats">
+                <span class="hw-score" style="color:${rate<60?'var(--orange)':'var(--navy)'}">${sb.correct}/${sb.total}</span>
+                <span>${rate}%</span>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : `<p style="color:var(--ink-soft);">还没有人提交。</p>`}
+    </div>
+
+    ${topMiss.length ? `
+    <div class="card">
+      <h3 style="margin-top:0;">全班错得最多的词</h3>
+      <p style="color:var(--ink-soft); font-size:13px; margin-top:0;">按错的人数排 —— 下节课重点讲这几个。</p>
+      <div class="word-list" style="max-height:420px;">
+        ${topMiss.map(m=>`
+          <div class="word-row ${m.n >= Math.max(2, done*0.4) ? 'word-row-tricky' : ''}">
+            <div class="word-row-main">
+              <span class="word-row-word">${esc(m.w)}</span>
+              ${speakBtn(m.w,'speak-sm')}
+              <span class="word-row-cn">${m.n} / ${done} 人错</span>
+            </div>
+            ${m.samples.length?`<div class="word-row-def" style="font-size:12.5px;">错误拼法：${m.samples.slice(0,8).map(x=>esc(x)).join(' · ')}</div>`:''}
+          </div>`).join('')}
+      </div>
+    </div>` : ''}`}`;
+
+  wireSpeak(wrap);
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'hwList'; render(); };
+  wrap.querySelector('#hwCopy').onclick = ()=>{
+    const box = wrap.querySelector('#hwLinkBox');
+    box.select(); box.setSelectionRange(0, 99999);
+    const ok = ()=>toast('链接已复制，粘贴到微信群发给学生。');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(ok, ()=>{ try{ document.execCommand('copy'); ok(); }catch(e){ toast('复制失败，手动选中复制吧。'); } });
+    } else {
+      try{ document.execCommand('copy'); ok(); }catch(e){ toast('复制失败，手动选中复制吧。'); }
+    }
+  };
+  wrap.querySelector('#hwToggle').onclick = async ()=>{
+    const next = { ...a, open: !a.open };
+    try{
+      await putAssignment(next);
+      state.hwSel = next;
+      state.hwList = (state.hwList||[]).map(x=>x.code===next.code?next:x);
+      render();
+    }catch(err){ toast('改不了状态：' + friendlyDbError(err)); }
+  };
+  const csv = wrap.querySelector('#hwCsv');
+  if(csv) csv.onclick = ()=>exportHwCsv(a, subs||[]);
+  wrap.querySelectorAll('.hw-sub-row').forEach(row=>{
+    row.onclick = ()=>showSubmissionDetail(a, (subs||[]).find(x=>x.id === row.dataset.sub));
+  });
+  return wrap;
+}
+
+function showSubmissionDetail(a, sb){
+  if(!sb) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  const close = ()=>overlay.remove();
+  overlay.onclick = e=>{ if(e.target === overlay) close(); };
+  const wrong = (sb.results||[]).filter(r=>!r.correct);
+  overlay.innerHTML = `
+    <div class="sheet">
+      <h3 style="margin-top:0;">${esc(sb.name)} · ${sb.correct}/${sb.total}（${pct(sb.correct,sb.total)}%）</h3>
+      <p style="color:var(--ink-soft); font-size:13px;">${esc(String(sb.submittedAt||'').slice(0,16).replace('T',' '))} · 用时 ${Math.round((sb.secs||0)/60)} 分钟${sb.isGuest?' · 未登录提交':''}</p>
+      ${wrong.length ? `
+        <h4 style="margin-bottom:6px;">错的 ${wrong.length} 题</h4>
+        <div class="word-list" style="max-height:300px;">
+          ${wrong.map(r=>`
+            <div class="word-row word-row-tricky">
+              <div class="word-row-main">
+                <span class="word-row-word">${esc(r.w)}</span>
+                <span class="word-row-cn">${r.kind==='choice' ? '选错了' : (r.input ? `写成了 ${esc(r.input)}` : '没写')}</span>
+              </div>
+            </div>`).join('')}
+        </div>` : `<p style="color:var(--teal);">全对 🎉</p>`}
+      <button class="btn btn-outline btn-block" id="subClose" style="margin-top:18px;">关闭</button>
+    </div>`;
+  overlay.querySelector('#subClose').onclick = close;
+  document.body.appendChild(overlay);
+}
+
+function exportHwCsv(a, subs){
+  const rows = [['作业', a.title||a.code], ['作业码', a.code], ['题量', a.words.length], [], 
+                ['姓名','是否登录','得分','总题数','正确率%','用时(秒)','提交时间','错词']];
+  subs.forEach(sb=>{
+    rows.push([
+      sb.name, sb.isGuest?'未登录':'已登录', sb.correct, sb.total,
+      pct(sb.correct, sb.total), sb.secs || 0,
+      String(sb.submittedAt||'').slice(0,19).replace('T',' '),
+      (sb.results||[]).filter(r=>!r.correct).map(r=>r.w).join(' ')
+    ]);
+  });
+  downloadCsv(`作业_${a.code}_成绩.csv`, rows);
 }
 
 /* ---------- CSV 导出 ---------- */
@@ -4955,6 +5678,22 @@ function renderImportBook(){
 (function boot(){
   render();                       // 先画一个"载入中"
 
+  /* 作业链接：#hw=XXXXXX。不管学生是登录状态、访客还是第一次来，
+     只要带着作业码进来，最后都要落到作业页，不能把人扔在登录页上。 */
+  const PENDING_HW = readHwCodeFromUrl();
+  let hwTried = false;
+  async function tryOpenPendingHw(){
+    if(!PENDING_HW || hwTried) return false;
+    hwTried = true;
+    if(state.teacherProfile) return false;     // 老师点自己发的链接：留在教师视图
+    const ok = await openHomework(PENDING_HW);
+    clearHwFromUrl();
+    render();
+    return ok;
+  }
+  // 上次没交上去的作业，联网后补交
+  setTimeout(()=>{ flushPendingHw(); }, 2000);
+
   // Google 跳转登录回来时，先把结果接住
   async function handleRedirectResult(){
     if(!CLOUD_OK) return false;
@@ -4981,6 +5720,7 @@ function renderImportBook(){
     const g = guestActive() ? loadGuestProfile() : null;
     if(g){ g.isGuest = true; enterAppWithProfile(g); }   // 访客不会是教师，不用等
     else state.screen = 'auth';
+    tryOpenPendingHw();                                  // 带作业码进来的，最后落到作业页
   }
 
   // 兜底先挂上：不管云端有没有回应，都不会卡在载入页
@@ -5003,6 +5743,7 @@ function renderImportBook(){
         const p = await fetchProfile(user.uid, base);
         setGuestActive(false);
         await enterAppWithProfile(p);      // 教师账号会被自动分流到教师视图
+        await tryOpenPendingHw();
       }catch(e){
         state.screen = 'auth';
         state.errorMsg = '读取账号数据失败，请重新登录。';
