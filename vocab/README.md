@@ -25,7 +25,24 @@ Firebase 项目 `nelc-vocab2`（nelcsingapore@gmail.com）：
 Firestore 在 asia-southeast1，安全规则已发布（学生只能读写自己那份，
 只有 role=teacher 能看全部，禁止任何人修改自己的 role 和 plan）。
 
-**上线后必须做一次**：Firebase 控制台 → Authentication → Settings →
-已获授权的网域 → 添加 `nelc.sg`。不加的话学生在正式网址上注册/登录会被拒绝。
+### ⚠️ 已获授权的网域：`nelc.sg` 还没加
+
+Firebase 控制台 → Authentication → Settings → 已获授权的网域 → 添加 `nelc.sg`。
+
+2026-10-21 查过 `identitytoolkit.googleapis.com/v1/projects`，列表里只有
+`localhost` / `nelc-vocab2.firebaseapp.com` / `nelc-vocab2.web.app` 三个默认项。
+
+**这一项只影响 Google 登录，不影响用户名密码登录** —— 授权网域是 OAuth 弹窗流程
+才检查的东西，邮箱密码登录根本不走这一步。所以账号登录一直是好的，
+Google 登录一直是坏的，表面上很容易误判成"域名已经授权了"。
+
+想确认有没有生效，直接查这个公开接口（apiKey 本来就印在页面里）：
+
+```bash
+curl -s "https://identitytoolkit.googleapis.com/v1/projects?key=AIzaSyCEUyqhlK-GHd60A2oep5DoIIYQM6ItadE"
+```
+
+另外顺手确认 Authentication → Sign-in method 里 Google 是「已启用」并选了
+「项目支持电子邮件」—— 没启用的话报的是 `auth/operation-not-allowed`，是另一个错。
 
 账号功能可用 `ACCOUNTS_ENABLED` 开关整体关闭，关闭时退回纯访客模式。
