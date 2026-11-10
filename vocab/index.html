@@ -497,6 +497,12 @@
     background:var(--bg); border:1px solid var(--line);
     padding:1px 6px; border-radius:9px; vertical-align:1px;
   }
+  .req-tag{
+    display:inline-block; margin-left:7px; font-size:10px; font-weight:700;
+    letter-spacing:0; text-transform:none; color:#8A4E17;
+    background:var(--orange-light); border:1px solid var(--orange);
+    padding:1px 6px; border-radius:9px; vertical-align:1px;
+  }
   .field-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.5; }
 
   /* ---------- 打赏 ---------- */
@@ -2746,8 +2752,8 @@ function renderAuth(){
       </div>
       ${isReg ? `
       <div class="field">
-        <label class="field-label">邮箱<span class="opt-tag">选填</span></label>
-        <input type="email" id="remail" placeholder="用于找回密码" autocomplete="email">
+        <label class="field-label">邮箱<span class="req-tag">必填</span></label>
+        <input type="email" id="remail" placeholder="真实可用的邮箱，忘记密码时靠它找回" autocomplete="email">
       </div>` : ''}
       ${!isReg ? `<div class="field" style="margin-top:-8px;">
         <button class="linkbtn" id="forgotBtn">忘记密码？</button>
@@ -2775,7 +2781,7 @@ function renderAuth(){
           : '<b>账号功能还没开通</b>，目前用访客模式练习 —— 词汇量检测、听写、单词本全都能用，进度存在这台设备上。<br><br>')}
         <b>访客模式</b>能用全部功能（词汇量检测、听写、单词本），进度存在这台设备上，<b>换设备或清浏览器数据就没了</b>。
         ${ACCOUNTS_ENABLED
-          ? '随时可以注册，练过的记录会自动并进新账号。用户名不用真实邮箱，随便起一个能记住的就行。<br><br>'
+          ? '随时可以注册，练过的记录会自动并进新账号。用户名随便起一个能记住的就行；邮箱要填真实可用的 —— 忘记密码时只能靠它找回。<br><br>'
             + '<b>老师</b>：直接用教师账号在上面登录即可，会自动进入教师视图，不用另找入口。'
           : '以后开通账号功能时，这台设备上练过的记录可以并进新账号。'}
       </div>
@@ -2794,11 +2800,9 @@ function renderAuth(){
     const rm = wrap.querySelector('#remail') ? wrap.querySelector('#remail').value.trim() : '';
     if(!u || !pw){ state.errorMsg = '请填写用户名和密码。'; render(); return; }
     if(isReg && pw.length < 6){ state.errorMsg = '密码至少 6 位。'; render(); return; }
-    if(isReg && rm && !isRealEmail(rm)){ state.errorMsg = '邮箱格式不太对，检查一下。'; render(); return; }
-    // 不填邮箱是允许的，但必须让人知道后果，不能事后才发现密码找不回
-    if(isReg && !rm && !confirm('没有填邮箱的话，忘记密码就没办法找回了（只能换个用户名重新注册）。\n\n确定不填吗？')){
-      return;
-    }
+    // 邮箱必填：没有它就没法重置密码，学生只能换个用户名重新注册，记录全丢
+    if(isReg && !rm){ state.errorMsg = '请填写邮箱 —— 忘记密码时要靠它找回。'; render(); return; }
+    if(isReg && !isRealEmail(rm)){ state.errorMsg = '邮箱格式不太对，检查一下。'; render(); return; }
     const btn = wrap.querySelector('#authSubmit');
     btn.disabled = true; btn.textContent = '处理中…';
     try{
