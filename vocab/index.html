@@ -4955,6 +4955,21 @@ function buildSubmission(a, entry, results, name, p){
 }
 
 /* ---------- 学生端：作业说明页 ---------- */
+/* 作业范围的显示文字。
+   早期生成的作业按单元布置时漏掉了系列名（只有「Book 1 · U04」），
+   光看这个分不清是 2000 Words 还是 4000 Words 的 Book 1。
+   题目本身存了 sid，所以这里能把系列名补回去，不用改数据库。 */
+function hwScopeLabel(a){
+  const lbl = a && a.scopeLabel ? String(a.scopeLabel) : '';
+  if(!lbl) return '—';
+  const sid = (a.words && a.words[0] && a.words[0].sid) || '';
+  if(!sid) return lbl;
+  // 这里不能用 getSeries()：它查不到时会退回第一个系列，反而贴错标签
+  const s = allSeries().find(x=>x.id === sid);
+  if(!s || !s.short) return lbl;
+  return lbl.indexOf(s.short) === 0 ? lbl : (s.short + ' · ' + lbl);
+}
+
 function renderHwIntro(){
   const a = state.hw;
   const p = state.profile;
@@ -4972,7 +4987,7 @@ function renderHwIntro(){
       <div class="hw-meta">
         <div><span>题型</span><b>${DICT_MODES[a.mode]?DICT_MODES[a.mode].icon:''} ${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}</b></div>
         <div><span>题量</span><b>${a.words.length} 题</b></div>
-        <div><span>范围</span><b>${esc(a.scopeLabel || '—')}</b></div>
+        <div><span>范围</span><b>${esc(hwScopeLabel(a))}</b></div>
         <div><span>截止</span><b>${a.due ? esc(a.due) : '不限'}</b></div>
       </div>
       <p class="hw-desc">${esc(DICT_MODES[a.mode] ? DICT_MODES[a.mode].desc : '')}${a.hint ? ' · 允许看提示' : ''}</p>
@@ -5083,7 +5098,7 @@ function renderHwList(){
           ${list.map(a=>`
             <div class="teacher-row" data-code="${esc(a.code)}">
               <div class="teacher-row-main">
-                <div class="teacher-row-name">${esc(a.title || '听写作业')} ${a.open?'':'<span class="hw-closed">已关闭</span>'}</div>
+                <div class="teacher-row-name">${esc(a.title && a.title !== a.scopeLabel ? a.title : hwScopeLabel(a))} ${a.open?'':'<span class="hw-closed">已关闭</span>'}</div>
                 <div class="teacher-row-sub">
                   ${esc(a.code)} · ${a.words?a.words.length:0} 题 · ${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}
                   ${a.due?` · 截止 ${esc(a.due)}`:''} · 布置于 ${esc(String(a.createdAt||'').slice(0,10))}
@@ -5263,7 +5278,7 @@ async function createAssignment(wrap){
 
   const scopeLabel = d.scope === 'book'
     ? `${s.short} · ${s.books[d.bi].label}`
-    : `${s.books[d.bi].label} · ${s.books[d.bi].units[d.ui].t}`;
+    : `${s.short} · ${s.books[d.bi].label} · ${s.books[d.bi].units[d.ui].t}`;
 
   // 题目现在就定下来，存进文档。学生端不再抽题，保证全班同题。
   const words = sample(pool, n).map(w=>({
@@ -5338,7 +5353,7 @@ function renderHwDetail(){
       <div class="hw-meta" style="margin-top:18px;">
         <div><span>题型</span><b>${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}</b></div>
         <div><span>题量</span><b>${a.words.length} 题</b></div>
-        <div><span>范围</span><b>${esc(a.scopeLabel||'—')}</b></div>
+        <div><span>范围</span><b>${esc(hwScopeLabel(a))}</b></div>
         <div><span>截止</span><b>${a.due?esc(a.due):'不限'}</b></div>
         <div><span>已交</span><b>${subs===null?'…':done + ' 份'}</b></div>
         <div><span>平均分</span><b>${avg===null?'—':avg + '%'}</b></div>
