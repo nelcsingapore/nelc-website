@@ -4051,7 +4051,7 @@ function renderDictRun(){
         <div style="font-size:12.5px; color:var(--ink-soft);">${esc(d.label)} · ${esc(DICT_MODES[d.mode].label)}</div>
       </div>
       <div style="display:flex; gap:8px;">
-        <button class="btn-ghost" id="scBtn" title="听不到声音？">🔈</button>
+        ${modeNeedsAudio(d.mode) ? `<button class="btn-ghost" id="scBtn" title="听不到声音？">🔈</button>` : ''}
         <button class="btn-ghost" id="quitBtn">结束</button>
       </div>
     </div>
@@ -4061,7 +4061,10 @@ function renderDictRun(){
     </div>
     <div id="dictCard"></div>`;
 
-  wrap.querySelector('#scBtn').onclick = openSoundCheck;
+  // 不用声音的题型（中译英默写、看词选义）不渲染这个按钮 —— 学生会把它
+  // 当成卡片里那个「再听一次」的 🔊 去点，点出来却是声音诊断面板
+  const scBtn = wrap.querySelector('#scBtn');
+  if(scBtn) scBtn.onclick = openSoundCheck;
   wrap.querySelector('#quitBtn').onclick = ()=>{
     TTS.stop();
     clearTimeout(d.autoTimer);
