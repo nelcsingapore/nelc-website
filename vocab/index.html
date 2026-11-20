@@ -1434,6 +1434,14 @@ const TTS = {
   okCount: 0, failCount: 0, lastError: '', notified: false,
   workingVoice: null,          // 实测能出声的嗓音名；'__default__' 表示系统默认
   _seq: 0,
+  /* 正在朗读的 utterance。这个引用必须留着：
+     utterance 只当局部变量存在的话，_say 一返回它就可能被回收，
+     Chrome / Safari 会在回收那一刻掀断正在播的音 ——
+     现象就是「前半截有声音，后半截突然没了」。等 onend 再放掉。 */
+  _live: null,
+  _beat: null,
+
+  _clearBeat(){ if(this._beat){ clearInterval(this._beat); this._beat = null; } },
 
   supported(){ return typeof window !== 'undefined' && 'speechSynthesis' in window; },
   refresh(){ if(this.supported()) this.voices = window.speechSynthesis.getVoices() || []; },
@@ -1528,14 +1536,40 @@ const TTS = {
       u.rate = o.rate == null ? 0.92 : o.rate;
       u.pitch = 1; u.volume = 1;
       let started = false;
+      this._live = u;                                  // 防回收，见上面 _live 的注释
+      // retry 必须先声明：speak() 理论上能同步抛 onerror，
+      // 那时 done() 会先于 const 赋值跑，撞上暂时性死区。
+      let retry = null;
+      const done = ()=>{
+        if(retry) clearTimeout(retry);
+        this._clearBeat();
+        if(this._live === u) this._live = null;
+      };
       u.onstart = ()=>{ started = true; this.okCount++; this.rememberVoice(v); };
+      u.onend = done;
       u.onerror = e=>{
         const err = e && e.error;
         if(err && err !== 'interrupted' && err !== 'canceled') this.lastError = err;
+        done();
       };
       synth.speak(u);
-      setTimeout(()=>{
+
+      /* 长句子还有另一个坑：Chrome 说到 ~15 秒会自己停掉。
+         定期 pause+resume 能把它的计时器撞回去。
+         单词根本播不到 9 秒，所以只对长文本开，不去扰动常见路径。 */
+      if(text.length > 60){
+        this._clearBeat();
+        this._beat = setInterval(()=>{
+          if(!synth.speaking){ this._clearBeat(); return; }
+          try{ synth.pause(); synth.resume(); }catch(e){}
+        }, 9000);
+      }
+
+      retry = setTimeout(()=>{
         if(started || this._seq !== seq) return;      // 成功了，或被新的朗读接管了
+        /* 有的浏览器 onstart 来得比声音晚。这时候重试会 cancel 掉
+           正在播的那一句 —— 正好造成「播到一半断掉」。先问一句还在不在说。 */
+        if(synth.speaking || synth.pending) return;
         // 从没成功过，才自动换嗓音重试；已经响过就别打断用户
         if(this.okCount === 0 && attempt + 1 < Math.min(cands.length, 5)){
           this._say(text, o, attempt + 1, seq);
@@ -1561,6 +1595,8 @@ const TTS = {
   stop(){
     if(!this.supported()) return;
     this._seq++;
+    this._clearBeat();
+    this._live = null;
     try{ window.speechSynthesis.cancel(); }catch(e){}
   },
 
