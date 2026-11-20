@@ -516,6 +516,66 @@
   input[type=text].gram-in:focus, .gram-sel:focus{ outline:none; border-color:transparent;
     border-bottom:2px solid var(--orange); background:var(--orange-light); }
   .gram-sel{ border:1px solid var(--navy); border-radius:7px; padding:4px 8px; }
+  /* 选择题：选项摆在句子上面，点一下填进句中的槽 */
+  .gram-opts{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; }
+  .gram-opts-n{ font-size:12px; color:var(--ink-soft); letter-spacing:.04em; }
+  .gram-opt{
+    font:inherit; font-size:15px; cursor:pointer; padding:7px 16px; border-radius:9px;
+    border:1.5px solid var(--line); background:#FBFCFC; color:var(--ink); line-height:1.3;
+  }
+  .gram-opt:hover:not(:disabled){ border-color:var(--navy); background:#fff; }
+  .gram-opt-on{ border-color:var(--navy); background:var(--navy); color:#fff; font-weight:600; }
+  .gram-opt-right{ border-color:#2E7D32; background:#EAF4EA; color:#2E7D32; font-weight:600; }
+  .gram-opt-on.gram-opt-right{ background:#2E7D32; color:#fff; }
+  .gram-opt:disabled{ cursor:default; opacity:1; }
+  .gram-slot{
+    display:inline-block; min-width:90px; text-align:center; padding:1px 10px; margin:0 3px;
+    border-bottom:2px solid var(--navy); color:var(--ink-soft);
+  }
+  .gram-slot-filled{ color:var(--ink); font-weight:600; background:var(--orange-light); }
+
+  /* 改错：句子里的每个词都能点 */
+  .gram-tok{
+    font:inherit; font-size:inherit; line-height:1.5; cursor:pointer; color:var(--ink);
+    background:transparent; border:0; border-bottom:2px dotted transparent;
+    padding:1px 2px; margin:0; border-radius:4px;
+  }
+  .gram-tok:hover:not(:disabled){ background:var(--orange-light); border-bottom-color:var(--orange); }
+  .gram-tok-on{ background:var(--navy); color:#fff; font-weight:600; border-bottom-color:transparent; }
+  .gram-tok-right{ box-shadow:inset 0 -3px 0 #2E7D32; }
+  .gram-tok-on.gram-tok-right{ background:#2E7D32; }
+  .gram-tok:disabled{ cursor:default; }
+  .gram-fix-box{ margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+  .gram-fix-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .gram-fix-from{
+    min-width:120px; padding:9px 14px; border-radius:9px; font-size:15px;
+    background:var(--paper-2,#F7F4EE); color:var(--ink-soft); border:1.5px dashed var(--line);
+  }
+  .gram-fix-set{ color:var(--ink); font-weight:600; border-style:solid; border-color:var(--navy); background:#fff; }
+  .gram-fix-arrow{ color:var(--ink-soft); font-size:18px; }
+  input[type=text].gram-in-fix{
+    flex:1; min-width:140px; border:1.5px solid var(--line); border-radius:9px;
+    padding:9px 14px; background:#FBFCFC; margin:0;
+  }
+  input[type=text].gram-in-fix:disabled{ background:#F2F2F0; color:var(--ink-soft); border-style:dashed; }
+
+  /* 连词成句：词卡 + 句子托盘 */
+  .gram-word{
+    font:inherit; font-size:15px; cursor:pointer; padding:7px 14px; border-radius:9px;
+    border:1.5px solid var(--orange); background:var(--orange-light); color:#8A4E17; line-height:1.3;
+  }
+  .gram-word:hover:not(:disabled){ background:var(--orange); color:#fff; }
+  .gram-word-used{ opacity:.3; cursor:default; border-style:dashed; }
+  .gram-tray{
+    display:flex; flex-wrap:wrap; align-items:center; gap:7px; min-height:54px;
+    padding:11px 13px; border-radius:11px; border:1.5px dashed var(--line); background:#FBFCFC;
+  }
+  .gram-tray-ph{ color:var(--ink-soft); font-size:14px; }
+  .gram-chosen{
+    font:inherit; font-size:16px; cursor:pointer; padding:5px 11px; border-radius:8px;
+    border:1.5px solid var(--navy); background:#fff; color:var(--ink); line-height:1.3;
+  }
+  .gram-chosen:hover{ border-color:var(--orange); background:var(--orange-light); }
   .gram-whole{ margin-top:14px; }
   input[type=text].gram-in-wide{ display:block; width:100%; min-width:0; margin:0;
     border:1.5px solid var(--line); border-radius:10px; padding:12px 14px; background:#FBFCFC; }
@@ -5074,6 +5134,10 @@ function gramBlankOk(input, answers){
   });
 }
 
+// 比对点中的词时忽略首尾标点：学生点的是 “durian.”，题库里存的是 durian
+function gramStripEnds(t){
+  return String(t || '').replace(/^[\s"'‘“(\[]+/, '').replace(/[\s"'’”).,!?;:\]]+$/, '');
+}
 function gramBlanks(it){ return (it && it.blanks) || []; }
 // 一份作业的总分 = 所有空的数量，不是题数。多空题按空独立计分。
 function gramTotalBlanks(items){
@@ -5089,8 +5153,8 @@ function gramParts(stem){
 const GRAM_KINDS = {
   cloze:  { label:'用提示词填空', tip:'把括号里的词改成正确形式填进去' },
   choice: { label:'二选一',       tip:'选出正确的那个' },
-  fix:    { label:'改错',         tip:'句子对就点「这句没错」，错就写出正确的部分' },
-  order:  { label:'连词成句',     tip:'把给出的词排成一个完整的句子' }
+  fix:    { label:'改错',         tip:'点句子里错的那个词，再写出它应该是什么；整句没错就点「这句没错」' },
+  order:  { label:'连词成句',     tip:'按顺序点词卡，排成一个完整的句子；点下面已排的词可以拿回来' }
 };
 
 /* ---------- 题库 ----------
@@ -5114,8 +5178,11 @@ const GRAM_BANK = [
         blanks:[{ answers:['understand'], options:['understand', 'am understanding'] }],
         note:'状态动词不用进行时' },
       { id:'p5', kind:'fix', stem:'She don’t like durian.',
-        blanks:[{ answers:["doesn't like", 'does not like'] }],
+        blanks:[{ target:'don’t', answers:["doesn't", 'does not'] }],
         note:'第三人称单数否定用 doesn’t' },
+      { id:'p5b', kind:'fix', stem:'My cousins live in Johor and visit us every holiday.',
+        blanks:[{ target:null, answers:[] }],
+        note:'这句本来就对 —— 改错题里一定会混进没有错的句子' },
       { id:'p6', kind:'order', stem:'___',
         hintWords:['often', 'we', 'the', 'bus', 'take', 'to', 'school'],
         blanks:[{ answers:['we often take the bus to school'] }],
@@ -5137,7 +5204,7 @@ const GRAM_BANK = [
         blanks:[{ answers:["haven't seen", 'have not seen'], options:["haven't seen", "didn't see"] }],
         note:'since 引导的时间段用现在完成时' },
       { id:'q4', kind:'fix', stem:'Did you went to the library yesterday?',
-        blanks:[{ answers:['did you go', 'go'] }], note:'did 后面用动词原形' },
+        blanks:[{ target:'went', answers:['go'] }], note:'did 后面用动词原形' },
       { id:'q5', kind:'cloze', stem:'By the time we arrived, the film ___ (already/start).',
         blanks:[{ prompt:'already/start', answers:['had already started'] }],
         note:'过去完成时 · 过去的更早之前' }
@@ -5176,17 +5243,35 @@ function renderGramRun(){
   /* 整行作答 vs 句中填空。
      改错题的 stem 是整句（没有 ___），连词成句的 stem 就是一个 ___ ——
      两种都该给一个整行的大输入框，塞进句子里的小框会把答案截断。 */
-  const wholeLine = parts.length === 1 || parts.join('').trim() === '';
+  /* 改错题：不让学生重打整句 —— 太费劲，而且打错字会被当成语法错。
+     改成点句子里的错词，再填正确的那一个词，和老师批卷子的动作一致。
+     本来就对的句子（target 为 null）靠「这句没错」按钮作答。
+
+     连词成句：同理不让打字，点词卡搭积木，点错了再点一下拿回来。 */
+  const isFix   = it.kind === 'fix';
+  const isOrder = it.kind === 'order' && it.hintWords && it.hintWords.length;
+  const wholeLine = !isFix && !isOrder && (parts.length === 1 || parts.join('').trim() === '');
   let sentence = '';
-  if(!wholeLine) parts.forEach((seg, i)=>{
+  if(isFix){
+    sentence = String(it.stem).split(/(\s+)/).map((tok, ti)=>{
+      if(!tok.trim()) return esc(tok);
+      return `<button type="button" class="gram-tok" data-tok="${ti}" data-word="${esc(tok)}">${esc(tok)}</button>`;
+    }).join('');
+  }
+  else if(isOrder){
+    sentence = `<div class="gram-tray" id="gTray"><span class="gram-tray-ph">点上面的词，按顺序排进来</span></div>`
+             + `<input type="hidden" data-bi="0">`;
+  }
+  else if(!wholeLine) parts.forEach((seg, i)=>{
     sentence += `<span class="gram-text">${esc(seg)}</span>`;
     if(i >= parts.length - 1) return;
     const b = blanks[i] || {};
     if(b.options && b.options.length){
-      sentence += `<select class="gram-sel" data-bi="${i}" ${g.checked ? 'disabled' : ''}>
-          <option value="">— 选一个 —</option>
-          ${b.options.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}
-        </select>`;
+      /* 选择题不在句子里放下拉框 —— 下拉框看着就是个填空，
+         学生点开才发现是选择题。改成把选项摆在句子上面，
+         点一下填进这个槽里。隐藏 input 只是为了让判分那套代码原样可用。 */
+      sentence += `<span class="gram-slot" data-slot="${i}">?</span>`
+                + `<input type="hidden" data-bi="${i}">`;
     } else {
       sentence += `<input type="text" class="gram-in" data-bi="${i}" autocomplete="off"
           autocapitalize="off" spellcheck="false"
@@ -5199,6 +5284,15 @@ function renderGramRun(){
         autocomplete="off" autocapitalize="off" spellcheck="false"
         placeholder="${esc(it.kind === 'order' ? '把句子写出来' : '写出正确的说法')}" ${g.checked ? 'disabled' : ''}></div>`;
   }
+
+  // 选项条：每个有选项的空一行，摆在句子上面
+  const optRows = blanks.map((b, i)=>{
+    if(!(b.options && b.options.length)) return '';
+    return `<div class="gram-opts">
+      ${blanks.length > 1 ? `<span class="gram-opts-n">第 ${i + 1} 空</span>` : ''}
+      ${b.options.map(o=>`<button type="button" class="gram-opt" data-oi="${i}" data-val="${esc(o)}">${esc(o)}</button>`).join('')}
+    </div>`;
+  }).join('');
 
   wrap.innerHTML = `
     <div class="session-head">
@@ -5213,9 +5307,20 @@ function renderGramRun(){
       <div class="gram-count">第 ${g.idx + 1} / ${g.queue.length} 题 · ${blanks.length > 1 ? blanks.length + ' 个空，分开算分' : '1 分'}</div>
       ${it.ctx ? `<p class="gram-ctx">${esc(it.ctx)}</p>` : ''}
       <p class="gram-tip">${esc(kind.tip)}</p>
-      ${it.kind === 'order' && it.hintWords ? `<div class="gram-words">${it.hintWords.map(w=>`<span>${esc(w)}</span>`).join('')}</div>` : ''}
+      ${isOrder ? `<div class="gram-words" id="gWords">${it.hintWords.map((w, wi)=>`<button type="button" class="gram-word" data-wi="${wi}">${esc(w)}</button>`).join('')}</div>` : ''}
+      ${optRows}
       <div class="gram-stem">${sentence}</div>
-      ${it.kind === 'fix' ? `<button class="btn-ghost gram-ok-btn" id="gNoErr" ${g.checked ? 'disabled' : ''}>这句没错</button>` : ''}
+      ${isOrder ? `<button class="btn-ghost gram-ok-btn" id="gClear">重排</button>` : ''}
+      ${isFix ? `
+        <div class="gram-fix-box">
+          <div class="gram-fix-row">
+            <span class="gram-fix-from" id="gFixFrom">先点上面那个错的词</span>
+            <span class="gram-fix-arrow">→</span>
+            <input type="text" class="gram-in gram-in-fix" id="gFixTo" data-bi="0" autocomplete="off"
+              autocapitalize="off" spellcheck="false" placeholder="改成什么" disabled>
+          </div>
+          <button class="btn-ghost gram-ok-btn" id="gNoErr" ${g.checked ? 'disabled' : ''}>这句没错</button>
+        </div>` : ''}
       <div id="gFeed"></div>
       <button class="btn btn-orange btn-block" id="gGo" style="margin-top:16px;">${g.checked ? (g.idx + 1 >= g.queue.length ? '看结果 →' : '下一题 →') : '检查'}</button>
     </div>`;
@@ -5229,9 +5334,40 @@ function renderGramRun(){
     inputs.forEach((el, i)=>{
       const b = blanks[i] || {};
       const ok = last && last.perBlank && last.perBlank[i];
-      el.value = (last && last.inputs && last.inputs[i]) || '';
+      const got = (last && last.inputs && last.inputs[i]) || '';
+      // 改错题的 inputs[0] 存的是「went → go」这种合成文字，不能塞回输入框
+      el.value = isFix ? g.fixCorr : got;
       el.classList.add(ok ? 'gram-right' : 'gram-wrong');
       if(!ok) el.title = '正确答案：' + (b.answers || []).join(' / ');
+      // 选择题的值在隐藏 input 里，看得见的是槽，所以颜色打在槽上
+      const slot = wrap.querySelector(`[data-slot="${i}"]`);
+      if(slot){
+        slot.textContent = got || '(没选)';
+        slot.classList.add(ok ? 'gram-right' : 'gram-wrong');
+      }
+    });
+    // 改错题：选中的词标出来，正确的那个标绿
+    if(isFix){
+      const b = blanks[0] || {};
+      const ff = wrap.querySelector('#gFixFrom');
+      if(ff){
+        ff.textContent = g.fixWord || (g.fixNoErr ? '这句没错' : '(没选词)');
+        ff.classList.add('gram-fix-set');
+      }
+      wrap.querySelectorAll('.gram-tok').forEach(btn=>{
+        btn.disabled = true;
+        if(g.fixWord && btn.dataset.word === g.fixWord) btn.classList.add('gram-tok-on');
+        if(b.target && gramNorm(gramStripEnds(btn.dataset.word)) === gramNorm(gramStripEnds(b.target))) btn.classList.add('gram-tok-right');
+      });
+    }
+    // 选项按钮停用，并把正确的那个标绿
+    wrap.querySelectorAll('.gram-opt').forEach(btn=>{
+      const i = +btn.dataset.oi;
+      const b = blanks[i] || {};
+      btn.disabled = true;
+      const chosen = (last && last.inputs && last.inputs[i]) || '';
+      if(btn.dataset.val === chosen) btn.classList.add('gram-opt-on');
+      if(gramBlankOk(btn.dataset.val, b.answers)) btn.classList.add('gram-opt-right');
     });
     const right = (last && last.perBlank || []).filter(Boolean).length;
     wrap.querySelector('#gFeed').innerHTML = `
@@ -5242,15 +5378,42 @@ function renderGramRun(){
       </div>`;
   }
 
+  /* 改错题的作答状态：选中了哪个词，改成什么。
+     判对要两个条件同时满足 —— 找对词，并且改对。
+     只指对地方、改错了不算会。 */
+  if(g.fixWord === undefined) g.fixWord = null;
+  if(g.fixCorr === undefined) g.fixCorr = '';
+  if(g.fixNoErr === undefined) g.fixNoErr = false;
+  if(!g.orderPick) g.orderPick = [];
   const check = ()=>{
     const vals = readAll();
-    const perBlank = blanks.map((b, i)=>gramBlankOk(vals[i], b.answers));
+    let perBlank;
+    if(isFix){
+      const b = blanks[0] || {};
+      const corr = vals[0] || '';
+      g.fixCorr = corr;
+      if(b.target == null){
+        // 本来就对的句子：只有按了「这句没错」才算对
+        perBlank = [g.fixNoErr && !g.fixWord];
+      } else {
+        const hitWord = !!g.fixWord && gramNorm(gramStripEnds(g.fixWord)) === gramNorm(gramStripEnds(b.target));
+        perBlank = [hitWord && gramBlankOk(corr, b.answers)];
+      }
+      vals[0] = g.fixNoErr && !g.fixWord ? '这句没错'
+              : (g.fixWord ? g.fixWord + ' → ' + (corr || '(空)') : '(没选词)');
+    } else {
+      perBlank = blanks.map((b, i)=>gramBlankOk(vals[i], b.answers));
+    }
     g.results.push({
       id: it.id,
       stem: it.stem,
       inputs: vals,
       // 正确答案要带到结果页去，不然学生复习时只看得到自己错在哪、看不到对的是什么
-      answers: blanks.map(b=>(b.answers || [])[0] || ''),
+      answers: isFix
+        ? [ (blanks[0] && blanks[0].target == null)
+              ? '这句没错'
+              : blanks[0].target + ' → ' + ((blanks[0].answers || [])[0] || '') ]
+        : blanks.map(b=>(b.answers || [])[0] || ''),
       perBlank,
       note: it.note || ''
     });
@@ -5261,12 +5424,79 @@ function renderGramRun(){
   wrap.querySelector('#gGo').onclick = ()=>{
     if(!g.checked){ check(); return; }
     g.checked = false;
+    g.fixWord = null; g.fixCorr = ''; g.fixNoErr = false; g.orderPick = [];
     g.idx += 1;
     if(g.idx >= g.queue.length) finishGrammar();
     else render();
   };
+  wrap.querySelectorAll('.gram-opt').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(g.checked) return;
+      const i = btn.dataset.oi;
+      wrap.querySelectorAll(`.gram-opt[data-oi="${i}"]`).forEach(x=>x.classList.remove('gram-opt-on'));
+      btn.classList.add('gram-opt-on');
+      const inp = wrap.querySelector(`input[data-bi="${i}"]`);
+      if(inp) inp.value = btn.dataset.val;
+      const slot = wrap.querySelector(`[data-slot="${i}"]`);
+      if(slot){ slot.textContent = btn.dataset.val; slot.classList.add('gram-slot-filled'); }
+    };
+  });
+
+  // 改错：点句子里的词 → 解锁下面的输入框
+  const fixTo = wrap.querySelector('#gFixTo');
+  const fixFrom = wrap.querySelector('#gFixFrom');
+  wrap.querySelectorAll('.gram-tok').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(g.checked) return;
+      const same = btn.classList.contains('gram-tok-on');
+      wrap.querySelectorAll('.gram-tok').forEach(x=>x.classList.remove('gram-tok-on'));
+      if(same){
+        g.fixWord = null;
+        if(fixFrom){ fixFrom.textContent = '先点上面那个错的词'; fixFrom.classList.remove('gram-fix-set'); }
+        if(fixTo){ fixTo.value = ''; fixTo.disabled = true; }
+        return;
+      }
+      btn.classList.add('gram-tok-on');
+      g.fixWord = btn.dataset.word;
+      g.fixNoErr = false;
+      if(fixFrom){ fixFrom.textContent = g.fixWord; fixFrom.classList.add('gram-fix-set'); }
+      if(fixTo){ fixTo.disabled = false; fixTo.focus(); }
+    };
+  });
   const noErr = wrap.querySelector('#gNoErr');
-  if(noErr) noErr.onclick = ()=>{ if(inputs[0]) inputs[0].value = '__NOERR__'; check(); };
+  if(noErr) noErr.onclick = ()=>{
+    g.fixNoErr = true; g.fixWord = null;
+    wrap.querySelectorAll('.gram-tok').forEach(x=>x.classList.remove('gram-tok-on'));
+    if(fixTo){ fixTo.value = ''; fixTo.disabled = true; }
+    check();
+  };
+
+  /* 连词成句：点词卡排进句子，点句子里的词拿回来。
+     用索引记顺序，因为给出的词里可能有重复的（the … the）。 */
+  const tray = wrap.querySelector('#gTray');
+  if(tray){
+    const picked = g.orderPick;
+    const hidden = wrap.querySelector('input[data-bi="0"]');
+    const paint = ()=>{
+      tray.innerHTML = picked.length
+        ? picked.map((wi, k)=>`<button type="button" class="gram-chosen" data-k="${k}">${esc(it.hintWords[wi])}</button>`).join('')
+        : '<span class="gram-tray-ph">点上面的词，按顺序排进来</span>';
+      if(hidden) hidden.value = picked.map(wi=>it.hintWords[wi]).join(' ');
+      wrap.querySelectorAll('.gram-word').forEach(b=>{
+        b.disabled = g.checked || picked.indexOf(+b.dataset.wi) >= 0;
+        b.classList.toggle('gram-word-used', picked.indexOf(+b.dataset.wi) >= 0);
+      });
+      tray.querySelectorAll('.gram-chosen').forEach(b=>{
+        b.onclick = ()=>{ if(g.checked) return; picked.splice(+b.dataset.k, 1); paint(); };
+      });
+    };
+    wrap.querySelectorAll('.gram-word').forEach(b=>{
+      b.onclick = ()=>{ if(g.checked) return; picked.push(+b.dataset.wi); paint(); };
+    });
+    const clr = wrap.querySelector('#gClear');
+    if(clr) clr.onclick = ()=>{ if(g.checked) return; picked.length = 0; paint(); };
+    paint();
+  }
 
   wrap.querySelector('#gQuit').onclick = ()=>{
     if(!confirm('现在结束的话，这次的答题不会交给老师。确定吗？')) return;
@@ -5275,7 +5505,7 @@ function renderGramRun(){
     render();
   };
 
-  const first = wrap.querySelector('[data-bi]');
+  const first = wrap.querySelector('input[type=text][data-bi]');
   if(first && !g.checked) setTimeout(()=>first.focus(), 30);
   return wrap;
 }
