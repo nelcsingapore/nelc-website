@@ -497,6 +497,46 @@
     background:var(--bg); border:1px solid var(--line);
     padding:1px 6px; border-radius:9px; vertical-align:1px;
   }
+  /* ---------- 语法练习 ---------- */
+  .gram-card{ line-height:1.9; }
+  .gram-count{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px; }
+  .gram-ctx{ font-size:14px; color:var(--ink-soft); background:var(--paper-2,#F7F4EE);
+             border-left:3px solid var(--navy); padding:9px 12px; border-radius:0 8px 8px 0; margin:0 0 14px; }
+  .gram-tip{ font-size:13px; color:var(--ink-soft); margin:0 0 14px; }
+  .gram-words{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
+  .gram-words span{ background:var(--orange-light); border:1px solid var(--orange);
+                    border-radius:7px; padding:3px 10px; font-size:14px; }
+  .gram-stem{ font-size:18px; line-height:2.3; }
+  .gram-text{ white-space:pre-wrap; }
+  input[type=text].gram-in, .gram-sel{
+    display:inline-block; width:auto; min-width:120px; max-width:100%; font:inherit; font-size:16px;
+    padding:2px 8px; margin:0 3px; border:0; border-bottom:2px solid var(--navy);
+    background:transparent; color:var(--ink); border-radius:0;
+  }
+  input[type=text].gram-in:focus, .gram-sel:focus{ outline:none; border-color:transparent;
+    border-bottom:2px solid var(--orange); background:var(--orange-light); }
+  .gram-sel{ border:1px solid var(--navy); border-radius:7px; padding:4px 8px; }
+  .gram-whole{ margin-top:14px; }
+  input[type=text].gram-in-wide{ display:block; width:100%; min-width:0; margin:0;
+    border:1.5px solid var(--line); border-radius:10px; padding:12px 14px; background:#FBFCFC; }
+  .gram-right{ border-bottom-color:#2E7D32; color:#2E7D32; }
+  .gram-wrong{ border-bottom-color:var(--orange); color:#8A4E17; text-decoration:line-through; }
+  .gram-right-t{ color:#2E7D32; font-weight:600; }
+  .gram-wrong-t{ color:#8A4E17; font-weight:600; text-decoration:line-through; }
+  .gram-ok-btn{ margin-top:12px; }
+  .gram-ans{ margin-top:6px; font-size:14px; }
+  .gram-note{ margin-top:6px; font-size:12.5px; color:var(--ink-soft); }
+  .gram-review-row{ padding:12px 0; border-bottom:1px solid var(--line); }
+  .gram-review-row:last-child{ border-bottom:0; }
+  .gram-review-q{ font-size:15px; }
+  .gram-review-a{ font-size:13.5px; color:var(--ink-soft); margin-top:4px; }
+  .gram-preview{ margin:14px 0 4px; padding:12px 14px; background:var(--paper-2,#F7F4EE); border-radius:10px; }
+  .gram-preview-row{ font-size:14px; padding:3px 0; color:var(--ink-soft); }
+  .gram-preview-more{ font-size:12.5px; color:var(--ink-soft); opacity:.75; padding-top:4px; }
+  @media (max-width:560px){
+    .gram-stem{ font-size:16.5px; line-height:2.5; }
+    input[type=text].gram-in, .gram-sel{ min-width:96px; font-size:15px; }
+  }
   .req-tag{
     display:inline-block; margin-left:7px; font-size:10px; font-weight:700;
     letter-spacing:0; text-transform:none; color:#8A4E17;
@@ -2624,7 +2664,7 @@ function toast(msg){
    渲染入口
    ========================================================= */
 const STUDENT_SCREENS = ['welcome','levelPick','vtLevel','vocabTest','vocabTestResult','adaptive','placementResult','dashboard',
-                         'session','quiz','complete','notebook','dictSetup','dictRun','dictResult','importBook'];
+                         'session','quiz','complete','notebook','dictSetup','dictRun','dictResult','importBook','gramRun','gramResult'];
 function render(){
   const app = document.getElementById('app');
   app.innerHTML = '';
@@ -2650,6 +2690,8 @@ function render(){
     case 'dictRun':        el = renderDictRun(); break;
     case 'dictResult':     el = renderDictResult(); break;
     case 'importBook':     el = renderImportBook(); break;
+    case 'gramRun':        el = renderGramRun(); break;
+    case 'gramResult':     el = renderGramResult(); break;
     case 'hwIntro':        el = renderHwIntro(); break;
     case 'hwList':         el = renderHwList(); break;
     case 'hwNew':          el = renderHwNew(); break;
@@ -4957,6 +4999,382 @@ function buildSubmission(a, entry, results, name, p){
   };
 }
 
+/* =========================================================
+   语法练习
+   =========================================================
+   作业本来只有「词汇听写」一种形态：一份作业 = 一批词 + 一个听写题型。
+   加语法题之后，同一个 assignments 文档可能装两种完全不同的东西，
+   所以给作业加一个 type 字段来区分。
+
+   关键：没有 type 的老作业一律当成 vocab。
+   线上已经发给学生的那些链接因此完全不受影响，数据库不用迁移。 */
+function hwType(a){ return (a && a.type === 'grammar') ? 'grammar' : 'vocab'; }
+
+/* 一道题的结构：
+
+   { id, kind, ctx, stem, blanks:[{answers:[...], prompt, options}], note }
+
+   stem 里用 ___ 标空，按出现顺序和 blanks 一一对应。
+   四种 kind 只影响提示语和输入框样式，判分逻辑是同一套：
+     cloze  提示词填空   My sister ___ (go) to school.
+     choice 二选一       I ___ you tomorrow.   [will call / call]
+     fix    改错         对的打勾，错的写出正确形式
+     order  连词成句     把给出的词排成一句话
+
+   每一空都可能有多个可接受答案（don't / do not），
+   所以 answers 是数组；一题多空就是 blanks 有多项。 */
+
+/* ---------- 判分 ---------- */
+/* 先做无歧义的归一化：花体撇号、大小写、首尾标点、连续空格。
+   句末的句号/问号不计较 —— 填空题里学生本来就看不到它该不该写。 */
+function gramNorm(s){
+  return String(s == null ? '' : s)
+    .replace(/[‘’ʼ′]/g, "'")
+    .replace(/[“”]/g, '"')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s.,!?;:]+/, '')
+    .replace(/[\s.,!?;:]+$/, '')
+    .trim();
+}
+
+/* 缩写要和全写算同一个答案 —— don't 和 do not 都对。
+   'd 和 's 有歧义（he's = he is / he has，I'd = I would / I had），
+   不去猜哪个，两种展开都生成，学生写哪种都认。 */
+function gramForms(s){
+  const base = gramNorm(s);
+  if(!base) return [''];
+  const t = base
+    .replace(/\bcan't\b/g, 'can not')
+    .replace(/\bcannot\b/g, 'can not')
+    .replace(/\bwon't\b/g, 'will not')
+    .replace(/\bshan't\b/g, 'shall not')
+    .replace(/\b([a-z]+)n't\b/g, '$1 not')
+    .replace(/\bi'm\b/g, 'i am')
+    .replace(/\b([a-z]+)'re\b/g, '$1 are')
+    .replace(/\b([a-z]+)'ve\b/g, '$1 have')
+    .replace(/\b([a-z]+)'ll\b/g, '$1 will');
+  const set = new Set([base, t]);
+  if(/'d\b/.test(t)){
+    set.add(t.replace(/\b([a-z]+)'d\b/g, '$1 would'));
+    set.add(t.replace(/\b([a-z]+)'d\b/g, '$1 had'));
+  }
+  if(/'s\b/.test(t)){
+    set.add(t.replace(/\b([a-z]+)'s\b/g, '$1 is'));
+    set.add(t.replace(/\b([a-z]+)'s\b/g, '$1 has'));
+  }
+  return Array.from(set);
+}
+
+function gramBlankOk(input, answers){
+  const got = gramForms(input);
+  return (answers || []).some(ans=>{
+    const forms = gramForms(ans);
+    return forms.some(a=>a !== '' && got.indexOf(a) >= 0);
+  });
+}
+
+function gramBlanks(it){ return (it && it.blanks) || []; }
+// 一份作业的总分 = 所有空的数量，不是题数。多空题按空独立计分。
+function gramTotalBlanks(items){
+  return (items || []).reduce((n, it)=>n + Math.max(1, gramBlanks(it).length), 0);
+}
+
+/* stem 按 ___ 切开，用来和输入框交替渲染。
+   切出来的段数永远比空数多 1。 */
+function gramParts(stem){
+  return String(stem || '').split(/_{2,}/);
+}
+
+const GRAM_KINDS = {
+  cloze:  { label:'用提示词填空', tip:'把括号里的词改成正确形式填进去' },
+  choice: { label:'二选一',       tip:'选出正确的那个' },
+  fix:    { label:'改错',         tip:'句子对就点「这句没错」，错就写出正确的部分' },
+  order:  { label:'连词成句',     tip:'把给出的词排成一个完整的句子' }
+};
+
+/* ---------- 题库 ----------
+   这里的句子全部是为了跑通引擎自己写的样题，不来自任何教材。
+   真正的题库在下一阶段导入，格式和这里完全一样。 */
+const GRAM_BANK = [
+  {
+    id: 'demo-present',
+    level: '基础',
+    topic: '现在时',
+    title: '样题 · 现在时',
+    items: [
+      { id:'p1', kind:'cloze', stem:'My sister ___ (leave) for school at seven every morning.',
+        blanks:[{ prompt:'leave', answers:['leaves'] }], note:'一般现在时 · 第三人称单数' },
+      { id:'p2', kind:'cloze', stem:'___ you ___ (speak) Malay at home?',
+        blanks:[{ prompt:'speak', answers:['do'] }, { prompt:'', answers:['speak'] }],
+        note:'一般现在时 · 疑问句（助动词 + 动词原形）' },
+      { id:'p3', kind:'cloze', stem:'Look out of the window — it ___ (rain) again.',
+        blanks:[{ prompt:'rain', answers:["'s raining", 'is raining'] }], note:'现在进行时 · 此刻正在发生' },
+      { id:'p4', kind:'choice', stem:'I ___ what you mean.',
+        blanks:[{ answers:['understand'], options:['understand', 'am understanding'] }],
+        note:'状态动词不用进行时' },
+      { id:'p5', kind:'fix', stem:'She don’t like durian.',
+        blanks:[{ answers:["doesn't like", 'does not like'] }],
+        note:'第三人称单数否定用 doesn’t' },
+      { id:'p6', kind:'order', stem:'___',
+        hintWords:['often', 'we', 'the', 'bus', 'take', 'to', 'school'],
+        blanks:[{ answers:['we often take the bus to school'] }],
+        note:'频率副词放在实义动词前面' }
+    ]
+  },
+  {
+    id: 'demo-past',
+    level: '基础',
+    topic: '过去时',
+    title: '样题 · 过去时',
+    items: [
+      { id:'q1', kind:'cloze', stem:'We ___ (go) to Sentosa last Sunday.',
+        blanks:[{ prompt:'go', answers:['went'] }], note:'一般过去时 · 不规则动词' },
+      { id:'q2', kind:'cloze', stem:'While I ___ (cook), the phone ___ (ring).',
+        blanks:[{ prompt:'cook', answers:['was cooking'] }, { prompt:'ring', answers:['rang'] }],
+        note:'过去进行时做背景，一般过去时做打断' },
+      { id:'q3', kind:'choice', stem:'I ___ him since 2019.',
+        blanks:[{ answers:["haven't seen", 'have not seen'], options:["haven't seen", "didn't see"] }],
+        note:'since 引导的时间段用现在完成时' },
+      { id:'q4', kind:'fix', stem:'Did you went to the library yesterday?',
+        blanks:[{ answers:['did you go', 'go'] }], note:'did 后面用动词原形' },
+      { id:'q5', kind:'cloze', stem:'By the time we arrived, the film ___ (already/start).',
+        blanks:[{ prompt:'already/start', answers:['had already started'] }],
+        note:'过去完成时 · 过去的更早之前' }
+    ]
+  }
+];
+
+function gramSet(gid){ return GRAM_BANK.find(g=>g.id === gid) || GRAM_BANK[0]; }
+
+/* ---------- 学生端：答题 ---------- */
+function startGrammar(a){
+  const p = state.profile;
+  const name = (p && !p.isGuest) ? p.username : (state.hwName || '').trim();
+  state.gram = {
+    queue: shuffle((a.items || []).slice()),
+    idx: 0,
+    results: [],
+    checked: false,
+    lastOk: null,
+    startedAt: Date.now(),
+    label: a.title || a.code,
+    hw: { code: a.code, title: a.title, name }
+  };
+  state.screen = 'gramRun';
+  render();
+}
+
+function renderGramRun(){
+  const g = state.gram;
+  const it = g.queue[g.idx];
+  const blanks = gramBlanks(it);
+  const parts = gramParts(it.stem);
+  const kind = GRAM_KINDS[it.kind] || GRAM_KINDS.cloze;
+  const wrap = document.createElement('div');
+
+  /* 整行作答 vs 句中填空。
+     改错题的 stem 是整句（没有 ___），连词成句的 stem 就是一个 ___ ——
+     两种都该给一个整行的大输入框，塞进句子里的小框会把答案截断。 */
+  const wholeLine = parts.length === 1 || parts.join('').trim() === '';
+  let sentence = '';
+  if(!wholeLine) parts.forEach((seg, i)=>{
+    sentence += `<span class="gram-text">${esc(seg)}</span>`;
+    if(i >= parts.length - 1) return;
+    const b = blanks[i] || {};
+    if(b.options && b.options.length){
+      sentence += `<select class="gram-sel" data-bi="${i}" ${g.checked ? 'disabled' : ''}>
+          <option value="">— 选一个 —</option>
+          ${b.options.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}
+        </select>`;
+    } else {
+      sentence += `<input type="text" class="gram-in" data-bi="${i}" autocomplete="off"
+          autocapitalize="off" spellcheck="false"
+          placeholder="${esc(b.prompt || '')}" ${g.checked ? 'disabled' : ''}>`;
+    }
+  });
+  if(wholeLine){
+    if(parts.length === 1) sentence = `<span class="gram-text">${esc(parts[0])}</span>`;
+    sentence += `<div class="gram-whole"><input type="text" class="gram-in gram-in-wide" data-bi="0"
+        autocomplete="off" autocapitalize="off" spellcheck="false"
+        placeholder="${esc(it.kind === 'order' ? '把句子写出来' : '写出正确的说法')}" ${g.checked ? 'disabled' : ''}></div>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="session-head">
+      <div>
+        <h2 style="margin:0;">📝 语法</h2>
+        <div style="font-size:12.5px; color:var(--ink-soft);">${esc(g.label)} · ${esc(kind.label)}</div>
+      </div>
+      <button class="btn-ghost" id="gQuit">结束</button>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${Math.round(g.idx / g.queue.length * 100)}%"></div></div>
+    <div class="card gram-card">
+      <div class="gram-count">第 ${g.idx + 1} / ${g.queue.length} 题 · ${blanks.length > 1 ? blanks.length + ' 个空，分开算分' : '1 分'}</div>
+      ${it.ctx ? `<p class="gram-ctx">${esc(it.ctx)}</p>` : ''}
+      <p class="gram-tip">${esc(kind.tip)}</p>
+      ${it.kind === 'order' && it.hintWords ? `<div class="gram-words">${it.hintWords.map(w=>`<span>${esc(w)}</span>`).join('')}</div>` : ''}
+      <div class="gram-stem">${sentence}</div>
+      ${it.kind === 'fix' ? `<button class="btn-ghost gram-ok-btn" id="gNoErr" ${g.checked ? 'disabled' : ''}>这句没错</button>` : ''}
+      <div id="gFeed"></div>
+      <button class="btn btn-orange btn-block" id="gGo" style="margin-top:16px;">${g.checked ? (g.idx + 1 >= g.queue.length ? '看结果 →' : '下一题 →') : '检查'}</button>
+    </div>`;
+
+  const inputs = Array.from(wrap.querySelectorAll('[data-bi]'));
+  const readAll = ()=> inputs.map(el=>el.value);
+
+  // 判过之后把对错标出来，顺便把正确答案补进空里，学生能直接对照
+  if(g.checked){
+    const last = g.results[g.results.length - 1];
+    inputs.forEach((el, i)=>{
+      const b = blanks[i] || {};
+      const ok = last && last.perBlank && last.perBlank[i];
+      el.value = (last && last.inputs && last.inputs[i]) || '';
+      el.classList.add(ok ? 'gram-right' : 'gram-wrong');
+      if(!ok) el.title = '正确答案：' + (b.answers || []).join(' / ');
+    });
+    const right = (last && last.perBlank || []).filter(Boolean).length;
+    wrap.querySelector('#gFeed').innerHTML = `
+      <div class="${right === blanks.length ? 'rec-box' : 'warn-box'}" style="margin-top:14px;">
+        <b>${right} / ${blanks.length} 正确</b>
+        ${right === blanks.length ? '' : `<div class="gram-ans">正确答案：${blanks.map(b=>esc((b.answers || [])[0] || '')).join(' ｜ ')}</div>`}
+        ${it.note ? `<div class="gram-note">${esc(it.note)}</div>` : ''}
+      </div>`;
+  }
+
+  const check = ()=>{
+    const vals = readAll();
+    const perBlank = blanks.map((b, i)=>gramBlankOk(vals[i], b.answers));
+    g.results.push({
+      id: it.id,
+      stem: it.stem,
+      inputs: vals,
+      // 正确答案要带到结果页去，不然学生复习时只看得到自己错在哪、看不到对的是什么
+      answers: blanks.map(b=>(b.answers || [])[0] || ''),
+      perBlank,
+      note: it.note || ''
+    });
+    g.checked = true;
+    render();
+  };
+
+  wrap.querySelector('#gGo').onclick = ()=>{
+    if(!g.checked){ check(); return; }
+    g.checked = false;
+    g.idx += 1;
+    if(g.idx >= g.queue.length) finishGrammar();
+    else render();
+  };
+  const noErr = wrap.querySelector('#gNoErr');
+  if(noErr) noErr.onclick = ()=>{ if(inputs[0]) inputs[0].value = '__NOERR__'; check(); };
+
+  wrap.querySelector('#gQuit').onclick = ()=>{
+    if(!confirm('现在结束的话，这次的答题不会交给老师。确定吗？')) return;
+    state.gram = null;
+    state.screen = state.profile && !state.profile.isGuest ? 'dashboard' : 'auth';
+    render();
+  };
+
+  const first = wrap.querySelector('[data-bi]');
+  if(first && !g.checked) setTimeout(()=>first.focus(), 30);
+  return wrap;
+}
+
+async function finishGrammar(){
+  const g = state.gram;
+  const p = state.profile;
+  // 按空计分：一题两个空算两分，学生看得出到底错在哪一个
+  const flat = [];
+  g.results.forEach(r=>{
+    r.perBlank.forEach((ok, i)=>{
+      flat.push({
+        w: String(r.stem || '').replace(/_{2,}/g, '___').slice(0, 40),
+        input: String(r.inputs[i] == null ? '' : r.inputs[i]).slice(0, 60),
+        correct: !!ok,
+        kind: 'spell'
+      });
+    });
+  });
+  const correct = flat.filter(r=>r.correct).length;
+  const entry = {
+    date: todayStr(),
+    mode: 'grammar',
+    label: g.label,
+    total: flat.length,
+    correct,
+    secs: Math.round((Date.now() - g.startedAt) / 1000),
+    wrong: flat.filter(r=>!r.correct).map(r=>({ w:r.w, got:r.input }))
+  };
+
+  // 语法题不进 wordLog —— 那张表是按单词组织的，语法点塞不进去。
+  // 但「今天练过了」还是要算，连续天数对学生是主要动力。
+  if(p){
+    p.gramHistory = (p.gramHistory || []).concat([entry]).slice(-60);
+    const today = todayStr();
+    if(p.lastCompletedDate !== today){
+      p.streak = (p.lastCompletedDate === daysAgoStr(1)) ? p.streak + 1 : 1;
+      p.lastCompletedDate = today;
+    }
+    await saveProfile(p);
+  }
+
+  state.gramResult = { ...entry, results: g.results, hw: g.hw };
+  state.screen = 'gramResult';
+
+  if(g.hw){
+    state.hwSubmitState = 'sending';
+    render();
+    const sub = buildSubmission(state.hw || { code: g.hw.code }, entry, flat, g.hw.name, p);
+    try{
+      await writeSubmission(sub);
+      state.hwSubmitState = 'ok';
+      state.hwDone = { ...(state.hwDone || {}), [sub.code]: { correct: sub.correct, total: sub.total } };
+    }catch(err){
+      stashPendingHw(sub);
+      state.hwSubmitState = 'pending';
+      console.warn('语法作业提交失败，已暂存本地：', err);
+    }
+  }
+  render();
+}
+
+function renderGramResult(){
+  const r = state.gramResult;
+  const rate = pct(r.correct, r.total);
+  const wrap = document.createElement('div');
+  const wrongItems = (r.results || []).filter(x=>x.perBlank.some(ok=>!ok));
+  wrap.innerHTML = `
+    <div class="hero">
+      <div class="eyebrow">语法练习</div>
+      <h1 style="margin-bottom:6px;">${r.correct} / ${r.total}</h1>
+      <p class="sub">${esc(r.label)} · 正确率 ${rate}% · 用时 ${Math.round(r.secs / 60)} 分钟</p>
+    </div>
+    ${r.hw ? `<div class="card">${
+      state.hwSubmitState === 'sending' ? '<p style="margin:0; color:var(--ink-soft);">正在交给老师…</p>'
+      : state.hwSubmitState === 'pending' ? '<div class="warn-box" style="margin:0;">网络没通，成绩先存在这台设备上了，下次打开会自动补交。</div>'
+      : '<div class="rec-box" style="margin:0;">已经交给老师了。</div>'}</div>` : ''}
+    ${wrongItems.length ? `
+    <div class="card">
+      <h3 style="margin-top:0;">错的这几题</h3>
+      <div class="gram-review">
+        ${wrongItems.map(x=>`
+          <div class="gram-review-row">
+            <div class="gram-review-q">${esc(String(x.stem).replace(/_{2,}/g, '______'))}</div>
+            <div class="gram-review-a">你写的：${x.inputs.map((v, i)=>`<span class="${x.perBlank[i] ? 'gram-right-t' : 'gram-wrong-t'}">${esc(v || '(空)')}</span>`).join('、')}</div>
+            <div class="gram-review-a">正确：<span class="gram-right-t">${(x.answers || []).map(v=>esc(v)).join('、')}</span></div>
+            ${x.note ? `<div class="gram-note">${esc(x.note)}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>` : `<div class="card"><div class="rec-box" style="margin:0;">全对，这套语法点已经掌握了。</div></div>`}
+    <button class="btn btn-primary btn-block" id="gDone">回到首页</button>`;
+  wrap.querySelector('#gDone').onclick = ()=>{
+    state.gram = null; state.gramResult = null; clearHwFromUrl();
+    state.screen = state.profile ? 'dashboard' : 'auth';
+    render();
+  };
+  return wrap;
+}
+
 /* ---------- 学生端：作业说明页 ---------- */
 /* 作业范围的显示文字。
    早期生成的作业按单元布置时漏掉了系列名（只有「Book 1 · U04」），
@@ -4965,6 +5383,7 @@ function buildSubmission(a, entry, results, name, p){
 function hwScopeLabel(a){
   const lbl = a && a.scopeLabel ? String(a.scopeLabel) : '';
   if(!lbl) return '—';
+  if(hwType(a) === 'grammar') return lbl;
   const sid = (a.words && a.words[0] && a.words[0].sid) || '';
   if(!sid) return lbl;
   // 这里不能用 getSeries()：它查不到时会退回第一个系列，反而贴错标签
@@ -4976,6 +5395,13 @@ function hwScopeLabel(a){
 function renderHwIntro(){
   const a = state.hw;
   const p = state.profile;
+  const isGram = hwType(a) === 'grammar';
+  // 两种作业的"题量"算法不一样：词汇按词数，语法按空数（多空题分开计分）
+  const qCount = isGram ? (a.items||[]).length : (a.words ? a.words.length : 0);
+  // 语法题一题可能有两个空，满分按空算，所以题数和分数要分开写清楚
+  const qScore = isGram ? gramTotalBlanks(a.items) : qCount;
+  const typeLabel = isGram ? '📝 语法练习' : ((DICT_MODES[a.mode] ? DICT_MODES[a.mode].icon + ' ' + DICT_MODES[a.mode].label : a.mode));
+  const typeDesc = isGram ? '按语法点出的填空、选择和改错题，每个空单独算分。' : (DICT_MODES[a.mode] ? DICT_MODES[a.mode].desc : '');
   const overdue = a.due && todayStr() > a.due;
   const needLogin = a.requireLogin && (!p || p.isGuest);
   const already = state.hwDone && state.hwDone[a.code];
@@ -4984,16 +5410,16 @@ function renderHwIntro(){
     <div class="hero" style="padding-bottom:10px;">
       <div class="eyebrow">作业 · ${esc(a.code)}</div>
       <h1 style="margin-bottom:6px;">${esc(a.title || '听写作业')}</h1>
-      <p class="sub">${esc(a.teacherName || '老师')} 布置 · ${a.words.length} 题 · ${esc(DICT_MODES[a.mode] ? DICT_MODES[a.mode].label : a.mode)}</p>
+      <p class="sub">${esc(a.teacherName || '老师')} 布置 · ${qCount} 题 · ${esc(isGram ? '语法练习' : (DICT_MODES[a.mode] ? DICT_MODES[a.mode].label : a.mode))}</p>
     </div>
     <div class="card hw-intro">
       <div class="hw-meta">
-        <div><span>题型</span><b>${DICT_MODES[a.mode]?DICT_MODES[a.mode].icon:''} ${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}</b></div>
-        <div><span>题量</span><b>${a.words.length} 题</b></div>
+        <div><span>题型</span><b>${esc(typeLabel)}</b></div>
+        <div><span>题量</span><b>${qCount} 题${isGram && qScore !== qCount ? ` · 满分 ${qScore}` : ''}</b></div>
         <div><span>范围</span><b>${esc(hwScopeLabel(a))}</b></div>
         <div><span>截止</span><b>${a.due ? esc(a.due) : '不限'}</b></div>
       </div>
-      <p class="hw-desc">${esc(DICT_MODES[a.mode] ? DICT_MODES[a.mode].desc : '')}${a.hint ? ' · 允许看提示' : ''}</p>
+      <p class="hw-desc">${esc(typeDesc)}${(!isGram && a.hint) ? ' · 允许看提示' : ''}</p>
 
       ${!a.open ? `<div class="warn-box">这份作业已经被老师关闭了，不能再提交。</div>` : ''}
       ${overdue ? `<div class="warn-box">已经过了截止日期（${esc(a.due)}）—— 还是可以做，但老师那边会显示迟交。</div>` : ''}
@@ -5027,7 +5453,7 @@ function renderHwIntro(){
       const n = (state.hwName||'').trim();
       if(n.length < 1){ toast('先写一下名字，不然老师不知道是谁交的。'); if(nameEl) nameEl.focus(); return; }
     }
-    startHomework(a);
+    if(isGram) startGrammar(a); else startHomework(a);
   };
   wrap.querySelector('#hwSkip').onclick = ()=>{
     state.hw = null; clearHwFromUrl();
@@ -5053,7 +5479,8 @@ async function openHomework(code, opts){
   try{
     const a = await fetchAssignment(code);
     if(!a){ if(!quiet) toast('没找到这个作业码，跟老师核对一下。'); return false; }
-    if(!a.words || !a.words.length){ if(!quiet) toast('这份作业没有题目，可能老师还没出完。'); return false; }
+    const qs = hwType(a) === 'grammar' ? a.items : a.words;
+    if(!qs || !qs.length){ if(!quiet) toast('这份作业没有题目，可能老师还没出完。'); return false; }
     if(!state.profile){
       const g = loadGuestProfile() || newGuestProfile();
       g.isGuest = true;
@@ -5103,7 +5530,7 @@ function renderHwList(){
               <div class="teacher-row-main">
                 <div class="teacher-row-name">${esc(a.title && a.title !== a.scopeLabel ? a.title : hwScopeLabel(a))} ${a.open?'':'<span class="hw-closed">已关闭</span>'}</div>
                 <div class="teacher-row-sub">
-                  ${esc(a.code)} · ${a.words?a.words.length:0} 题 · ${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}
+                  ${esc(a.code)} · ${hwType(a)==='grammar' ? (a.items||[]).length+' 题 · 📝 语法' : (a.words?a.words.length:0)+' 题 · '+esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}
                   ${a.due?` · 截止 ${esc(a.due)}`:''} · 布置于 ${esc(String(a.createdAt||'').slice(0,10))}
                 </div>
               </div>
@@ -5116,9 +5543,11 @@ function renderHwList(){
   wrap.querySelector('#hwNewBtn').onclick = ()=>{
     const p = state.teacherProfile;
     state.hwDraft = {
+      type: 'vocab',
       title: '', due: '', requireLogin: false,
       scope: 'unit', sid: (allSeries()[0]||{}).id, bi: 0, ui: 0,
-      mode: 'audio', count: 20, hint: false
+      mode: 'audio', count: 20, hint: false,
+      gid: (GRAM_BANK[0]||{}).id, gcount: 'all'
     };
     state.screen = 'hwNew'; render();
   };
@@ -5154,8 +5583,129 @@ async function openHwDetail(code){
 }
 
 /* ---------- 教师端：布置新作业 ---------- */
+/* 作业类型切换条。词汇和语法两种作业的设置项完全不同，
+   所以界面分成两个函数，只共用顶部这一行切换。 */
+function hwTypeChips(d){
+  return `
+    <label class="field-label" style="margin-top:4px;">作业类型</label>
+    <div class="chip-row">
+      <button class="chip ${d.type==='grammar'?'':'chip-on'}" data-hwtype="vocab">📚 词汇听写</button>
+      <button class="chip ${d.type==='grammar'?'chip-on':''}" data-hwtype="grammar">📝 语法练习</button>
+    </div>`;
+}
+function bindHwTypeChips(wrap, d){
+  wrap.querySelectorAll('[data-hwtype]').forEach(b=>b.onclick = ()=>{
+    d.type = b.dataset.hwtype;
+    render();
+  });
+}
+
+function renderHwNewGram(){
+  const d = state.hwDraft;
+  const set = gramSet(d.gid);
+  const items = set.items || [];
+  const blanks = gramTotalBlanks(items);
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="session-head">
+      <h2 style="margin:0;">布置新作业</h2>
+      <button class="btn-ghost" id="hwBack">← 返回作业列表</button>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label class="field-label">作业名称</label>
+        <input type="text" id="hwTitle" placeholder="例如：现在时复习" value="${esc(d.title)}" maxlength="40">
+      </div>
+
+      ${hwTypeChips(d)}
+
+      <label class="field-label" style="margin-top:18px;">出哪一套</label>
+      <div class="chip-row">
+        ${GRAM_BANK.map(g=>`<button class="chip ${g.id===d.gid?'chip-on':''}" data-gid="${esc(g.id)}">${esc(g.title)}</button>`).join('')}
+      </div>
+      <p class="hw-note" style="margin-top:10px;">${esc(set.level)} · ${esc(set.topic)} · ${items.length} 道题、共 ${blanks} 个空</p>
+
+      <div class="gram-preview">
+        ${items.slice(0,3).map(it=>`<div class="gram-preview-row">${esc(String(it.stem).replace(/_{2,}/g,'______'))}</div>`).join('')}
+        ${items.length>3?`<div class="gram-preview-more">…还有 ${items.length-3} 题</div>`:''}
+      </div>
+
+      <div class="hw-opts">
+        <div class="field">
+          <label class="field-label">截止日期<span class="opt-tag">选填</span></label>
+          <input type="date" id="hwDue" value="${esc(d.due)}">
+        </div>
+        <div>
+          <label class="field-label">提交方式</label>
+          <div class="chip-row">
+            <button class="chip ${d.requireLogin?'':'chip-on'}" data-req="0">不用注册也能交</button>
+            <button class="chip ${d.requireLogin?'chip-on':''}" data-req="1">必须登录后交</button>
+          </div>
+          <p class="hw-note" style="margin-top:8px;">${d.requireLogin
+            ? '成绩会记到学生账号上，身份确定；但没注册的学生交不了。'
+            : '学生点链接填个名字就能做，交作业率最高；名字是自己填的，重名要留意。'}</p>
+        </div>
+      </div>
+
+      <div class="setup-foot">
+        <div style="color:var(--ink-soft); font-size:13px;">满分 <b>${blanks}</b> 分（一题多空的，每空算一分）</div>
+        <button class="btn btn-orange" id="hwCreate" ${items.length?'':'disabled'}>生成作业链接 →</button>
+      </div>
+    </div>`;
+
+  const t = wrap.querySelector('#hwTitle');
+  t.oninput = ()=>{ d.title = t.value; };
+  const due = wrap.querySelector('#hwDue');
+  due.onchange = ()=>{ d.due = due.value; };
+  bindHwTypeChips(wrap, d);
+  wrap.querySelectorAll('[data-gid]').forEach(b=>b.onclick = ()=>{ d.gid = b.dataset.gid; render(); });
+  wrap.querySelectorAll('[data-req]').forEach(b=>b.onclick = ()=>{ d.requireLogin = b.dataset.req === '1'; render(); });
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'hwList'; render(); };
+  wrap.querySelector('#hwCreate').onclick = ()=>createGrammarAssignment(wrap);
+  return wrap;
+}
+
+async function createGrammarAssignment(wrap){
+  const d = state.hwDraft;
+  const tp = state.teacherProfile;
+  const set = gramSet(d.gid);
+  const items = (set.items || []).slice();
+  if(!items.length){ toast('这套题库是空的。'); return; }
+
+  const scopeLabel = `${set.title}（${set.level} · ${set.topic}）`;
+  const a = {
+    code: newHwCode(),
+    teacherUid: tp.uid,
+    teacherName: tp.username || '老师',
+    title: (d.title || '').trim() || scopeLabel,
+    type: 'grammar',
+    gid: set.id,
+    scopeLabel,
+    requireLogin: !!d.requireLogin,
+    due: d.due || null,
+    open: true,
+    items,
+    createdAt: new Date().toISOString()
+  };
+
+  const btn = wrap.querySelector('#hwCreate');
+  btn.disabled = true; btn.textContent = '生成中…';
+  try{
+    await putAssignment(a);
+    state.hwList = [a].concat(state.hwList || []);
+    state.hwCounts = { ...(state.hwCounts||{}), [a.code]: 0 };
+    state.hwSel = a; state.hwSubs = [];
+    state.screen = 'hwDetail'; render();
+    toast('语法作业已生成，把链接发给学生就行。');
+  }catch(err){
+    btn.disabled = false; btn.textContent = '生成作业链接 →';
+    toast('生成失败：' + friendlyDbError(err));
+  }
+}
+
 function renderHwNew(){
   const d = state.hwDraft;
+  if(d.type === 'grammar') return renderHwNewGram();
   const s = getSeries(d.sid);
   if(!s.books[d.bi]) d.bi = 0;
   const units = (s.books[d.bi] || { units:[] }).units;
@@ -5176,7 +5726,9 @@ function renderHwNew(){
         <input type="text" id="hwTitle" placeholder="例如：第 3 单元听写" value="${esc(d.title)}" maxlength="40">
       </div>
 
-      <label class="field-label" style="margin-top:4px;">出哪些词</label>
+      ${hwTypeChips(d)}
+
+      <label class="field-label" style="margin-top:18px;">出哪些词</label>
       <div class="chip-row">
         <button class="chip ${d.scope==='unit'?'chip-on':''}" data-scope="unit">指定单元</button>
         <button class="chip ${d.scope==='book'?'chip-on':''}" data-scope="book">整册</button>
@@ -5250,6 +5802,7 @@ function renderHwNew(){
   t.oninput = ()=>{ d.title = t.value; };
   const due = wrap.querySelector('#hwDue');
   due.onchange = ()=>{ d.due = due.value; };
+  bindHwTypeChips(wrap, d);
   wrap.querySelectorAll('[data-scope]').forEach(b=>b.onclick = ()=>upd(()=>{ d.scope = b.dataset.scope; }));
   wrap.querySelectorAll('[data-sid]').forEach(b=>b.onclick = ()=>upd(()=>{ d.sid = b.dataset.sid; d.bi = 0; d.ui = 0; }));
   wrap.querySelectorAll('[data-bi]').forEach(b=>b.onclick = ()=>upd(()=>{ d.bi = +b.dataset.bi; d.ui = 0; }));
@@ -5321,6 +5874,9 @@ async function createAssignment(wrap){
 /* ---------- 教师端：单份作业的提交情况 ---------- */
 function renderHwDetail(){
   const a = state.hwSel;
+  const isGram = hwType(a) === 'grammar';
+  const qCount = isGram ? (a.items||[]).length : (a.words ? a.words.length : 0);
+  const qScore = isGram ? gramTotalBlanks(a.items) : qCount;
   const subs = state.hwSubs;
   const link = hwLink(a.code);
   const wrap = document.createElement('div');
@@ -5354,8 +5910,8 @@ function renderHwDetail(){
       <p class="hw-note">学生点开就能直接做，不用注册。链接发不出去的话，让他们在首页点「我有作业码」，输入 <b class="hw-code">${esc(a.code)}</b>。</p>
 
       <div class="hw-meta" style="margin-top:18px;">
-        <div><span>题型</span><b>${esc(DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode)}</b></div>
-        <div><span>题量</span><b>${a.words.length} 题</b></div>
+        <div><span>题型</span><b>${esc(isGram ? '📝 语法练习' : (DICT_MODES[a.mode]?DICT_MODES[a.mode].label:a.mode))}</b></div>
+        <div><span>题量</span><b>${qCount} 题${isGram && qScore !== qCount ? ` · 满分 ${qScore}` : ''}</b></div>
         <div><span>范围</span><b>${esc(hwScopeLabel(a))}</b></div>
         <div><span>截止</span><b>${a.due?esc(a.due):'不限'}</b></div>
         <div><span>已交</span><b>${subs===null?'…':done + ' 份'}</b></div>
@@ -5392,8 +5948,8 @@ function renderHwDetail(){
 
     ${topMiss.length ? `
     <div class="card">
-      <h3 style="margin-top:0;">全班错得最多的词</h3>
-      <p style="color:var(--ink-soft); font-size:13px; margin-top:0;">按错的人数排 —— 下节课重点讲这几个。</p>
+      <h3 style="margin-top:0;">${isGram ? '全班错得最多的题' : '全班错得最多的词'}</h3>
+      <p style="color:var(--ink-soft); font-size:13px; margin-top:0;">按错的人数排 —— 下节课重点讲这几${isGram ? '题' : '个'}。</p>
       <div class="word-list" style="max-height:420px;">
         ${topMiss.map(m=>`
           <div class="word-row ${m.n >= Math.max(2, done*0.4) ? 'word-row-tricky' : ''}">
@@ -5465,7 +6021,8 @@ function showSubmissionDetail(a, sb){
 }
 
 function exportHwCsv(a, subs){
-  const rows = [['作业', a.title||a.code], ['作业码', a.code], ['题量', a.words.length], [], 
+  const rows = [['作业', a.title||a.code], ['作业码', a.code],
+                ['题量', hwType(a)==='grammar' ? gramTotalBlanks(a.items) : (a.words?a.words.length:0)], [], 
                 ['姓名','是否登录','得分','总题数','正确率%','用时(秒)','提交时间','错词']];
   subs.forEach(sb=>{
     rows.push([
