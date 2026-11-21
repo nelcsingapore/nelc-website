@@ -389,6 +389,7 @@
   .dict-card{ text-align:center; }
   .dict-prompt-audio{ padding:14px 0 6px; }
   .dict-prompt-cn{ padding:18px 0 6px; }
+  .dict-cn-speak{ font-size:20px; vertical-align:middle; margin-left:4px; }
   .dict-cn{ font-size:30px; font-weight:700; color:var(--navy); line-height:1.35; font-family:'Fraunces',serif; }
   .dict-sub{ font-size:14px; color:var(--teal); font-style:italic; margin-top:10px; }
   .dict-hintline{ margin-top:8px; min-height:22px; font-size:13px; }
@@ -810,6 +811,8 @@
     .face-front .the-word{ font-size:37px; }
     .dict-input{ font-size:21px; }
     .dict-cn{ font-size:25px; }
+    /* 手机上按得到：补到 44px 见方的点击区 */
+    .dict-cn-speak{ padding:12px; }
     .big-speak{ width:92px; height:92px; font-size:37px; }
     .fb-answer{ font-size:28px; }
     .stat{ min-width:calc(50% - 7px); }
@@ -4236,6 +4239,8 @@ function paintDictCard(){
      这里不给首字母：例句题要写的是句中那个变形（cries 而不是 cry），
      露出首字母基本等于送分。开关关掉就是纯听力，一点提示都没有。 */
   const sentCn = (isSent && blank) && state.dictCfg.sentCn !== false && !!(w.cn || w.def);
+  // 中译英默写也给个喇叭：听得到读音，拼写就有声音可依。设备不支持朗读时不画出来
+  const canSpeak = !isSent && !isAudio && TTS.supported();
 
   host.innerHTML = `
     <div class="card dict-card">
@@ -4256,7 +4261,7 @@ function paintDictCard(){
         </div>
       ` : `
         <div class="dict-prompt-cn">
-          <div class="dict-cn">${esc(w.cn || w.def)}</div>
+          <div class="dict-cn">${esc(w.cn || w.def)}${canSpeak ? `<button class="speak dict-cn-speak" id="cnSpeak" title="听一下这个词怎么读">🔊</button>` : ''}</div>
           <div class="dict-sub">${w.pos ? esc(w.pos) : '&nbsp;'}</div>
           <div class="dict-hintline" id="hintLine">${state.dictCfg.hint ? `<button class="linkbtn" id="letterHint">看首字母提示</button>` : '&nbsp;'}</div>
         </div>
@@ -4284,6 +4289,10 @@ function paintDictCard(){
     // 等语音列表真的加载出来再自动播 —— 首次 getVoices() 往往还是空的
     if(p.prefs.autoPlay) TTS.whenReady(()=>setTimeout(()=>play(false), 180));
   }
+  /* 中译英默写的喇叭：只有点了才响，绝不自动播。
+     这一题先看到的是中文，自动播等于直接把答案念出来。 */
+  const cnSpeak = host.querySelector('#cnSpeak');
+  if(cnSpeak) cnSpeak.onclick = ()=>play(false);
   const cnHint = host.querySelector('#cnHint');
   if(cnHint) cnHint.onclick = ()=>{
     d.hintUsed = true;
