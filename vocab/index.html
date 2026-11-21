@@ -1530,9 +1530,15 @@ const TTS = {
     const cands = this.candidates(o.accent);
     if(attempt >= cands.length){ this.failCount++; this.maybeWarn(true); return; }
     const v = cands[attempt];
+    /* cancel() 之后不能同一拍就 speak()：Chrome 会把新排进去的这句
+       连同被取消的那句一起吞掉 —— 表现就是「点了喇叭，一点声音都没有，
+       也不报错」。要取消时隔 80ms 再说。 */
+    const busy = synth.speaking || synth.pending;
+    if(busy) synth.cancel();
+    if(synth.paused) synth.resume();
+    const fire = ()=>{
     try{
-      if(synth.speaking || synth.pending) synth.cancel();
-      if(synth.paused) synth.resume();
+      if(this._seq !== seq) return;                  // 这期间又有新的朗读，放弃这次
       const u = new SpeechSynthesisUtterance(text);
       if(v) u.voice = v;
       u.lang = o.accent === 'uk' ? 'en-GB' : 'en-US';
@@ -1582,10 +1588,23 @@ const TTS = {
           this.maybeWarn(this.okCount === 0 && attempt + 1 >= Math.min(cands.length, 5));
         }
       }, 1300);
+
+      /* 兜底：引擎偶尔会卡死 —— speaking 一直是 true，onstart / onend
+         一个都不来，之后每一句都被静默吞掉。上面那个 retry 看到
+         speaking 就让路，正好永远救不回来。短文本超过 3 秒还没开口
+         就按卡死处理，强行取消重来。长句子可能真的在念，不动它。 */
+      if(text.length <= 60) setTimeout(()=>{
+        if(started || this._seq !== seq) return;
+        try{ synth.cancel(); }catch(e){}
+        if(attempt + 1 < Math.min(cands.length, 5)) this._say(text, o, attempt + 1, seq);
+        else { this.failCount++; this.maybeWarn(this.okCount === 0); }
+      }, 3000);
     }catch(e){
       this.lastError = (e && e.message) || 'exception';
       this.failCount++; this.maybeWarn(true);
     }
+    };
+    if(busy) setTimeout(fire, 80); else fire();
   },
 
   maybeWarn(exhausted){
