@@ -561,6 +561,9 @@
   input[type=text].gram-in-fix:disabled{ background:#F2F2F0; color:var(--ink-soft); border-style:dashed; }
 
   /* 连词成句：词卡 + 句子托盘 */
+  .gram-corr{ color:var(--teal); font-weight:700; font-size:14px; margin:0 6px 0 3px; white-space:nowrap; }
+  .gram-tok-struck{ text-decoration:line-through; text-decoration-thickness:2px; color:var(--ink-soft); background:var(--paper-2,#F7F4EE); }
+  .gram-slot-bank{ cursor:pointer; min-width:84px; }
   .gram-word{
     font:inherit; font-size:15px; cursor:pointer; padding:7px 14px; border-radius:9px;
     border:1.5px solid var(--orange); background:var(--orange-light); color:#8A4E17; line-height:1.3;
@@ -5187,6 +5190,7 @@ function gramForms(s){
     .replace(/\b([a-z]+)'ve\b/g, '$1 have')
     .replace(/\b([a-z]+)'ll\b/g, '$1 will');
   const set = new Set([base, t]);
+  const na = gramNoApos(base); if(na) set.add(na);
   if(/'d\b/.test(t)){
     set.add(t.replace(/\b([a-z]+)'d\b/g, '$1 would'));
     set.add(t.replace(/\b([a-z]+)'d\b/g, '$1 had'));
@@ -5196,6 +5200,19 @@ function gramForms(s){
     set.add(t.replace(/\b([a-z]+)'s\b/g, '$1 has'));
   }
   return Array.from(set);
+}
+
+/* 漏撇号算对：dont = don't。但有些词去掉撇号就变成另一个真词，
+   而且往往正是这道题在考的区别 —— we're/were、it's/its、he'll/hell。
+   这些必须照写，不放宽。 */
+/* 去掉撇号就撞上另一个真词、而且那个词正好可能是这道题在考的 ——
+   这些要求照写。cant / wont 虽然也是词，但不会和被考的形式混，放过。 */
+const APOS_KEEP = /^(were|its|hell|shell|ill|well|wed|shed|hed|id)$/;
+function gramNoApos(s){
+  const t = String(s || '').replace(/'/g, '');
+  if(t === s) return null;                       // 本来就没撇号
+  const bad = t.split(/\s+/).some(w=>APOS_KEEP.test(w));
+  return bad ? null : t;
 }
 
 function gramBlankOk(input, answers){
@@ -5226,7 +5243,9 @@ const GRAM_KINDS = {
   cloze:  { label:'用提示词填空', tip:'把括号里的词改成正确形式填进去' },
   choice: { label:'二选一',       tip:'选出正确的那个' },
   fix:    { label:'改错',         tip:'点句子里错的那个词，再写出它应该是什么；整句没错就点「这句没错」' },
-  order:  { label:'连词成句',     tip:'按顺序点词卡，排成一个完整的句子；点下面已排的词可以拿回来' }
+  order:  { label:'连词成句',     tip:'按顺序点词卡，排成一个完整的句子；点下面已排的词可以拿回来' },
+  bank:   { label:'词库填空',     tip:'点上面的词，按顺序填进句子里的空；点已填的词可以拿回来' },
+  strike: { label:'划掉多余的词', tip:'句子里多了一个词，点掉它；没有多余的词就点「这句没错」' }
 };
 
 /* ---------- 题库 ----------
@@ -5320,9 +5339,13 @@ function renderGramRun(){
      本来就对的句子（target 为 null）靠「这句没错」按钮作答。
 
      连词成句：同理不让打字，点词卡搭积木，点错了再点一下拿回来。 */
-  const isFix   = it.kind === 'fix';
+  /* 划掉多余的词：和改错同一套「点句子里的词」交互，只是不用再打字。
+     词库填空：和连词成句同一套词卡，只是填进句子里指定的空，不是排成一行。 */
+  const isStrike = it.kind === 'strike';
+  const isFix   = it.kind === 'fix' || isStrike;
   const isOrder = it.kind === 'order' && it.hintWords && it.hintWords.length;
-  const wholeLine = !isFix && !isOrder && (parts.length === 1 || parts.join('').trim() === '');
+  const isBank  = it.kind === 'bank' && it.bankWords && it.bankWords.length;
+  const wholeLine = !isFix && !isOrder && !isBank && (parts.length === 1 || parts.join('').trim() === '');
   let sentence = '';
   if(isFix){
     sentence = String(it.stem).split(/(\s+)/).map((tok, ti)=>{
@@ -5338,7 +5361,11 @@ function renderGramRun(){
     sentence += `<span class="gram-text">${esc(seg)}</span>`;
     if(i >= parts.length - 1) return;
     const b = blanks[i] || {};
-    if(b.options && b.options.length){
+    if(isBank){
+      sentence += `<span class="gram-slot gram-slot-bank" data-bslot="${i}">?</span>`
+                + `<input type="hidden" data-bi="${i}">`;
+    }
+    else if(b.options && b.options.length){
       /* 选择题不在句子里放下拉框 —— 下拉框看着就是个填空，
          学生点开才发现是选择题。改成把选项摆在句子上面，
          点一下填进这个槽里。隐藏 input 只是为了让判分那套代码原样可用。 */
@@ -5379,18 +5406,23 @@ function renderGramRun(){
       <div class="gram-count">第 ${g.idx + 1} / ${g.queue.length} 题 · ${blanks.length > 1 ? blanks.length + ' 个空，分开算分' : '1 分'}</div>
       ${it.ctx ? `<p class="gram-ctx">${esc(it.ctx)}</p>` : ''}
       <p class="gram-tip">${esc(kind.tip)}</p>
-      ${isOrder ? `<div class="gram-words" id="gWords">${it.hintWords.map((w, wi)=>`<button type="button" class="gram-word" data-wi="${wi}">${esc(w)}</button>`).join('')}</div>` : ''}
+      ${(isOrder || isBank) ? `<div class="gram-words" id="gWords">${(isBank ? it.bankWords : it.hintWords).map((w, wi)=>`<button type="button" class="gram-word" data-wi="${wi}">${esc(w)}</button>`).join('')}</div>` : ''}
       ${optRows}
       <div class="gram-stem">${sentence}</div>
       ${isOrder ? `<button class="btn-ghost gram-ok-btn" id="gClear">重排</button>` : ''}
       ${isFix ? `
         <div class="gram-fix-box">
-          <div class="gram-fix-row">
-            <span class="gram-fix-from" id="gFixFrom">先点上面那个错的词</span>
-            <span class="gram-fix-arrow">→</span>
-            <input type="text" class="gram-in gram-in-fix" id="gFixTo" data-bi="0" autocomplete="off"
-              autocapitalize="off" spellcheck="false" placeholder="改成什么" disabled>
-          </div>
+          ${isStrike ? `
+            <div class="gram-fix-row">
+              <span class="gram-fix-from" id="gFixFrom">点句子里多余的那个词</span>
+              <input type="hidden" id="gFixTo" data-bi="0">
+            </div>` : `
+            <div class="gram-fix-row">
+              <span class="gram-fix-from" id="gFixFrom">先点上面那个错的词</span>
+              <span class="gram-fix-arrow">→</span>
+              <input type="text" class="gram-in gram-in-fix" id="gFixTo" data-bi="0" autocomplete="off"
+                autocapitalize="off" spellcheck="false" placeholder="改成什么" disabled>
+            </div>`}
           <button class="btn-ghost gram-ok-btn" id="gNoErr" ${g.checked ? 'disabled' : ''}>这句没错</button>
         </div>` : ''}
       <div id="gFeed"></div>
@@ -5399,6 +5431,19 @@ function renderGramRun(){
 
   const inputs = Array.from(wrap.querySelectorAll('[data-bi]'));
   const readAll = ()=> inputs.map(el=>el.value);
+
+  /* 空要跟着内容长。固定宽度的框装不下 he doesn't usually succeed 这种答案，
+     学生写到一半就看不见前面了，批改后更是只能看到被截断的半句。 */
+  const fit = el=>{
+    if(el.type === 'hidden') return;
+    const n = Math.max((el.value || '').length, (el.placeholder || '').length, 8);
+    el.style.width = Math.min(n + 2, 46) + 'ch';
+  };
+  inputs.forEach(el=>{
+    if(el.type === 'hidden' || el.classList.contains('gram-in-wide')) return;
+    fit(el);
+    el.addEventListener('input', ()=>fit(el));
+  });
 
   // 判过之后把对错标出来，顺便把正确答案补进空里，学生能直接对照
   if(g.checked){
@@ -5410,12 +5455,25 @@ function renderGramRun(){
       // 改错题的 inputs[0] 存的是「went → go」这种合成文字，不能塞回输入框
       el.value = isFix ? g.fixCorr : got;
       el.classList.add(ok ? 'gram-right' : 'gram-wrong');
-      if(!ok) el.title = '正确答案：' + (b.answers || []).join(' / ');
-      // 选择题的值在隐藏 input 里，看得见的是槽，所以颜色打在槽上
-      const slot = wrap.querySelector(`[data-slot="${i}"]`);
+      if(el.type !== 'hidden') fit(el);
+      // 选择题 / 词库填空的值在隐藏 input 里，看得见的是槽，所以颜色打在槽上
+      const slot = wrap.querySelector(`[data-slot="${i}"], [data-bslot="${i}"]`);
       if(slot){
-        slot.textContent = got || '(没选)';
+        slot.textContent = got || '(没填)';
         slot.classList.add(ok ? 'gram-right' : 'gram-wrong');
+      }
+      /* 错的那个空，正确答案就写在它右边。
+         原来是在卡片底下列一行「正确答案：A｜B｜C…」，16 个空挤成一片，
+         学生得数到第几个才知道哪个是自己的 —— 手机上根本不会去数。 */
+      if(!ok && !isFix){
+        const after = slot || el;
+        const corr = esc((b.answers || [])[0] || '');
+        if(corr && after.parentNode){
+          const tip = document.createElement('span');
+          tip.className = 'gram-corr';
+          tip.innerHTML = '→ ' + corr;
+          after.parentNode.insertBefore(tip, after.nextSibling);
+        }
       }
     });
     // 改错题：选中的词标出来，正确的那个标绿
@@ -5423,12 +5481,12 @@ function renderGramRun(){
       const b = blanks[0] || {};
       const ff = wrap.querySelector('#gFixFrom');
       if(ff){
-        ff.textContent = g.fixWord || (g.fixNoErr ? '这句没错' : '(没选词)');
+        ff.textContent = (g.fixWord ? (isStrike ? '划掉：' + g.fixWord : g.fixWord) : (g.fixNoErr ? '这句没错' : '(没选词)'));
         ff.classList.add('gram-fix-set');
       }
       wrap.querySelectorAll('.gram-tok').forEach(btn=>{
         btn.disabled = true;
-        if(g.fixWord && btn.dataset.word === g.fixWord) btn.classList.add('gram-tok-on');
+        if(g.fixWord && btn.dataset.word === g.fixWord) btn.classList.add(isStrike ? 'gram-tok-struck' : 'gram-tok-on');
         if(b.target && gramNorm(gramStripEnds(btn.dataset.word)) === gramNorm(gramStripEnds(b.target))) btn.classList.add('gram-tok-right');
       });
     }
@@ -5445,7 +5503,7 @@ function renderGramRun(){
     wrap.querySelector('#gFeed').innerHTML = `
       <div class="${right === blanks.length ? 'rec-box' : 'warn-box'}" style="margin-top:14px;">
         <b>${right} / ${blanks.length} 正确</b>
-        ${right === blanks.length ? '' : `<div class="gram-ans">正确答案：${blanks.map(b=>esc((b.answers || [])[0] || '')).join(' ｜ ')}</div>`}
+        ${(right === blanks.length || !isFix) ? '' : `<div class="gram-ans">正确答案：${esc((last && last.answers || [])[0] || '')}</div>`}
         ${it.note ? `<div class="gram-note">${esc(it.note)}</div>` : ''}
       </div>`;
   }
@@ -5464,15 +5522,20 @@ function renderGramRun(){
       const b = blanks[0] || {};
       const corr = vals[0] || '';
       g.fixCorr = corr;
+      const hitWord = !!g.fixWord && gramNorm(gramStripEnds(g.fixWord)) === gramNorm(gramStripEnds(b.target || ''));
       if(b.target == null){
         // 本来就对的句子：只有按了「这句没错」才算对
         perBlank = [g.fixNoErr && !g.fixWord];
+      } else if(isStrike){
+        // 划掉题只看点对没点对，没有「改成什么」这一步
+        perBlank = [hitWord];
       } else {
-        const hitWord = !!g.fixWord && gramNorm(gramStripEnds(g.fixWord)) === gramNorm(gramStripEnds(b.target));
         perBlank = [hitWord && gramBlankOk(corr, b.answers)];
       }
       vals[0] = g.fixNoErr && !g.fixWord ? '这句没错'
-              : (g.fixWord ? g.fixWord + ' → ' + (corr || '(空)') : '(没选词)');
+              : !g.fixWord ? '(没选词)'
+              : isStrike ? '划掉 ' + g.fixWord
+              : g.fixWord + ' → ' + (corr || '(空)');
     } else {
       perBlank = blanks.map((b, i)=>gramBlankOk(vals[i], b.answers));
     }
@@ -5484,7 +5547,9 @@ function renderGramRun(){
       answers: isFix
         ? [ (blanks[0] && blanks[0].target == null)
               ? '这句没错'
-              : blanks[0].target + ' → ' + ((blanks[0].answers || [])[0] || '') ]
+              : isStrike
+                ? '划掉 ' + blanks[0].target
+                : blanks[0].target + ' → ' + ((blanks[0].answers || [])[0] || '') ]
         : blanks.map(b=>(b.answers || [])[0] || ''),
       perBlank,
       note: it.note || ''
@@ -5496,7 +5561,7 @@ function renderGramRun(){
   wrap.querySelector('#gGo').onclick = ()=>{
     if(!g.checked){ check(); return; }
     g.checked = false;
-    g.fixWord = null; g.fixCorr = ''; g.fixNoErr = false; g.orderPick = [];
+    g.fixWord = null; g.fixCorr = ''; g.fixNoErr = false; g.orderPick = []; g.bankPick = null;
     g.idx += 1;
     if(g.idx >= g.queue.length) finishGrammar();
     else render();
@@ -5524,15 +5589,15 @@ function renderGramRun(){
       wrap.querySelectorAll('.gram-tok').forEach(x=>x.classList.remove('gram-tok-on'));
       if(same){
         g.fixWord = null;
-        if(fixFrom){ fixFrom.textContent = '先点上面那个错的词'; fixFrom.classList.remove('gram-fix-set'); }
+        if(fixFrom){ fixFrom.textContent = isStrike ? '点句子里多余的那个词' : '先点上面那个错的词'; fixFrom.classList.remove('gram-fix-set'); }
         if(fixTo){ fixTo.value = ''; fixTo.disabled = true; }
         return;
       }
       btn.classList.add('gram-tok-on');
       g.fixWord = btn.dataset.word;
       g.fixNoErr = false;
-      if(fixFrom){ fixFrom.textContent = g.fixWord; fixFrom.classList.add('gram-fix-set'); }
-      if(fixTo){ fixTo.disabled = false; fixTo.focus(); }
+      if(fixFrom){ fixFrom.textContent = isStrike ? '划掉：' + g.fixWord : g.fixWord; fixFrom.classList.add('gram-fix-set'); }
+      if(fixTo && !isStrike){ fixTo.disabled = false; fixTo.focus(); }
     };
   });
   const noErr = wrap.querySelector('#gNoErr');
@@ -5542,6 +5607,48 @@ function renderGramRun(){
     if(fixTo){ fixTo.value = ''; fixTo.disabled = true; }
     check();
   };
+
+  /* 词库填空：点词卡 → 填进第一个还空着的槽；点已填的槽 → 把词退回去。
+     和连词成句一样按索引记，因为词库里可能有重复的词。 */
+  if(isBank){
+    if(!g.bankPick || g.bankPick.length !== blanks.length) g.bankPick = blanks.map(()=>null);
+    const pick = g.bankPick;
+    const paintBank = ()=>{
+      const used = pick.filter(x=>x != null);
+      blanks.forEach((b, i)=>{
+        const slot = wrap.querySelector(`[data-bslot="${i}"]`);
+        const inp  = wrap.querySelector(`input[data-bi="${i}"]`);
+        const wi = pick[i];
+        if(slot){
+          slot.textContent = wi == null ? '?' : it.bankWords[wi];
+          slot.classList.toggle('gram-slot-filled', wi != null);
+        }
+        if(inp) inp.value = wi == null ? '' : it.bankWords[wi];
+      });
+      wrap.querySelectorAll('.gram-word').forEach(b=>{
+        const wi = +b.dataset.wi;
+        b.disabled = g.checked || used.indexOf(wi) >= 0;
+        b.classList.toggle('gram-word-used', used.indexOf(wi) >= 0);
+      });
+    };
+    wrap.querySelectorAll('.gram-word').forEach(b=>{
+      b.onclick = ()=>{
+        if(g.checked) return;
+        const empty = pick.indexOf(null);
+        if(empty < 0) return;                     // 空都填满了
+        pick[empty] = +b.dataset.wi;
+        paintBank();
+      };
+    });
+    wrap.querySelectorAll('[data-bslot]').forEach(slot=>{
+      slot.onclick = ()=>{
+        if(g.checked) return;
+        pick[+slot.dataset.bslot] = null;
+        paintBank();
+      };
+    });
+    paintBank();
+  }
 
   /* 连词成句：点词卡排进句子，点句子里的词拿回来。
      用索引记顺序，因为给出的词里可能有重复的（the … the）。 */
