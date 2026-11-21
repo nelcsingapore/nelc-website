@@ -5412,6 +5412,827 @@ const GRAM_BANK = [
   ]
   },
   {
+    id: 'opg-basic-B',
+    level: 'Basic',
+    topic: '过去时',
+    title: 'Basic 测试 B · 过去时',
+    source: 'Oxford Practice Grammar Basic · Test B',
+    items: [
+
+{ id:'bB-A1', kind:'fix', ctx:'Anna 写邮件给西班牙朋友 Pilar。时态用错了就点那个词组改过来；本来就对的点「这句没错」。',
+  stem:'I was living in the south of the city when I started going out with my husband.',
+  blanks:[{ target:null, answers:[] }], note:'过去进行时做背景，本来就对' },
+{ id:'bB-A2', kind:'fix', stem:'I was starting going out with my husband, Mel.',
+  tokens:['I was starting','going','out','with','my','husband,','Mel.'],
+  blanks:[{ target:'I was starting', answers:['I started'] }], note:'一次性的事件用一般过去时，不用进行时' },
+{ id:'bB-A3', kind:'fix', stem:'We were both studying French at the time we have met at University College.',
+  tokens:['We','were','both','studying','French','at','the','time','we have met','at','University','College.'],
+  blanks:[{ target:'we have met', answers:['we met'] }], note:'有明确过去时间，不能用现在完成时' },
+{ id:'bB-A4', kind:'fix', stem:'In fact, I’ve stayed in flats all over London!',
+  blanks:[{ target:null, answers:[] }], note:'讲至今为止的经历，现在完成时没问题' },
+{ id:'bB-A5', kind:'fix', stem:'My favourite flat had a balcony and you could see a small park in the square.',
+  blanks:[{ target:null, answers:[] }], note:'描述过去的情况，一般过去时没问题' },
+{ id:'bB-A6', kind:'fix', stem:'I had never forgotten that flat, or my flatmates.',
+  tokens:['I had never forgotten','that','flat,','or','my','flatmates.'],
+  blanks:[{ target:'I had never forgotten', answers:['I have never forgotten'] }], note:'到现在都还没忘 → 现在完成时，不是过去完成时' },
+{ id:'bB-A7', kind:'fix', stem:'How long have you lived in Madrid?',
+  blanks:[{ target:null, answers:[] }], note:'How long 问到现在为止，现在完成时' },
+{ id:'bB-A8', kind:'fix', stem:'Have you been born there?',
+  tokens:['Have you been','born','there?'],
+  blanks:[{ target:'Have you been', answers:['Were you'] }], note:'出生是过去一个点上的事，用一般过去时' },
+{ id:'bB-A9', kind:'fix', stem:'I didn’t see all the different parts of London yet!',
+  tokens:['I didn’t see','all','the','different','parts','of','London','yet!'],
+  blanks:[{ target:'I didn’t see', answers:['I haven’t seen'] }], note:'yet 配现在完成时' },
+{ id:'bB-A10', kind:'fix', stem:'I saw an old friend by chance about a week ago when I walked to work.',
+  tokens:['I','saw','an','old','friend','by','chance','about','a','week','ago','when','I walked','to','work.'],
+  blanks:[{ target:'I walked', answers:['I was walking'] }], note:'被打断的那个背景动作用过去进行时' },
+{ id:'bB-A11', kind:'fix', stem:'I have visited her last week.',
+  tokens:['I have visited','her','last','week.'],
+  blanks:[{ target:'I have visited', answers:['I visited'] }], note:'last week 是明确的过去时间，不能用现在完成时' },
+{ id:'bB-A12', kind:'fix', stem:'I’ve never seen such a small kitchen!',
+  blanks:[{ target:null, answers:[] }], note:'讲至今为止的经历，现在完成时没问题' },
+
+{ id:'bB-B1', kind:'fix', ctx:'Sara 和丈夫在回忆四十年前。有几处一般过去时应该是过去完成时 —— 点出来改掉。',
+  stem:'I saw it before anyway.', tokens:['I saw','it','before','anyway.'],
+  blanks:[{ target:'I saw', answers:['I had seen'] }], note:'比那个过去时间点更早 → 过去完成时' },
+{ id:'bB-B2', kind:'fix', stem:'So you already decided you liked me!',
+  tokens:['So','you already decided','you','liked','me!'],
+  blanks:[{ target:'you already decided', answers:['you had already decided'] }], note:'already 指更早发生 → 过去完成时' },
+{ id:'bB-B3', kind:'fix', stem:'And then you took me to your favourite restaurant, but it closed a week before!',
+  tokens:['And','then','you','took','me','to','your','favourite','restaurant,','but','it closed','a','week','before!'],
+  blanks:[{ target:'it closed', answers:['it had closed'] }], note:'a week before 比那时更早 → 过去完成时' },
+{ id:'bB-B4', kind:'fix', stem:'We went to a pub to meet your friends, but it was empty. Everyone went home.',
+  tokens:['We','went','to','a','pub','to','meet','your','friends,','but','it','was','empty.','Everyone went','home.'],
+  blanks:[{ target:'Everyone went', answers:['Everyone had gone'] }], note:'我们到之前人就走了 → 过去完成时' },
+{ id:'bB-B5', kind:'fix', stem:'When I got home I couldn’t open the front door because I left my keys at the pub.',
+  tokens:['When','I','got','home','I','couldn’t','open','the','front','door','because','I left','my','keys','at','the','pub.'],
+  blanks:[{ target:'I left', answers:['I had left'] }], note:'钥匙先落下，才有后来开不了门 → 过去完成时' },
+
+{ id:'bB-C1', kind:'fix', ctx:'Anna 在跟妈妈通电话。有几个动词应该用现在完成进行时或过去进行时 —— 点出来改掉。',
+  stem:'In fact, I did some maths when you rang just now.',
+  tokens:['In','fact,','I did','some','maths','when','you','rang','just','now.'],
+  blanks:[{ target:'I did', answers:['I was doing'] }], note:'被电话打断的那个动作 → 过去进行时' },
+{ id:'bB-C2', kind:'fix', stem:'I’ve got a headache because I’ve worked harder than I’ve ever done before!',
+  tokens:['I’ve','got','a','headache','because','I’ve worked','harder','than','I’ve','ever','done','before!'],
+  blanks:[{ target:'I’ve worked', answers:['I’ve been working'] }], note:'强调一直持续到现在的过程 → 现在完成进行时' },
+{ id:'bB-C3', kind:'fix', stem:'You’ve read books and things all your life!',
+  tokens:['You’ve read','books','and','things','all','your','life!'],
+  blanks:[{ target:'You’ve read', answers:['You’ve been reading'] }], note:'all your life 强调持续 → 现在完成进行时' },
+{ id:'bB-C4', kind:'fix', stem:'Dad says you learnt French verbs in the park when he first met you!',
+  tokens:['Dad','says','you learnt','French','verbs','in','the','park','when','he','first','met','you!'],
+  blanks:[{ target:'you learnt', answers:['you were learning'] }], note:'他遇见你时正在做的事 → 过去进行时' },
+{ id:'bB-C5', kind:'fix', stem:'Every time I’ve visited her in the last month, she has worked hard.',
+  tokens:['Every','time','I’ve','visited','her','in','the','last','month,','she has worked','hard.'],
+  blanks:[{ target:'she has worked', answers:['she has been working'] }], note:'每次去都在做 → 现在完成进行时' },
+
+{ id:'bB-D', kind:'cloze',
+  ctx:'Paul、Caroline、Jo 和 Rob 在聊各自度过的假期。用括号里的动词的一般过去时、过去进行时或现在完成时补全对话。',
+  stem:'Paul: Do you remember when we went to Morocco, Caroline?\nCaroline: Unfortunately, yes. ___ your passport, just after we arrived.\nPaul: That’s right. ___ near the coast, and I was looking at the fish, and ___ into the sea! ___ North Africa?\nJo: No. ___ to Ghana, though. ___ there in 2001, didn’t we, Rob?\nRob: Sorry, Jo. ___. ___ such a busy day today! Actually, ___ asleep on the sofa when ___ and invited us around.\nJo: So you need a holiday, don’t you?\nCaroline: ___ to this really great country hotel, The Woodland Spa, about a month ago. ___ the Sunday newspapers, and ___ this advertisement. ___ talking about it since we got back!\nPaul: It was fantastic!\nRob: ___ a jacuzzi in the bathroom?\nJo: ___ a bowl of fruit in your bedroom?\nCaroline: All of that. And ___ such a beautiful swimming pool in your life!\nJo: It sounds lovely. Better than that hotel ___ in last year in Devon.\nRob: Oh dear. ___ terrible. One night ___ in our room, and the owner knocked on the door at ten o’clock and told us to go to sleep!\nJo: ___ a holiday in the UK for years, I’m afraid.',
+  blanks:[
+    { prompt:'You/lose',        answers:['You lost'] },
+    { prompt:'We/sail',         answers:['We were sailing'] },
+    { prompt:'it/just drop',    answers:['it just dropped'] },
+    { prompt:'you/two/visit',   answers:['Have you two visited'] },
+    { prompt:'We/be',           answers:['We’ve been','We have been'] },
+    { prompt:'We/fly',          answers:['We flew'] },
+    { prompt:'I/not/listen',    answers:['I wasn’t listening','I was not listening'] },
+    { prompt:'I/have',          answers:['I’ve had','I have had'] },
+    { prompt:'I/fall',          answers:['I was falling'] },
+    { prompt:'Paul/ring',       answers:['Paul rang'] },
+    { prompt:'Paul and I/go',   answers:['Paul and I went'] },
+    { prompt:'We/read',         answers:['We were reading'] },
+    { prompt:'we/see',          answers:['we saw'] },
+    { prompt:'Paul/not/stop',   answers:['Paul hasn’t stopped','Paul has not stopped'] },
+    { prompt:'it/have',         answers:['Did it have'] },
+    { prompt:'be/there',        answers:['Was there'] },
+    { prompt:'you/never/see',   answers:['you’ve never seen','you have never seen'] },
+    { prompt:'Rob and I/stay',  answers:['Rob and I stayed'] },
+    { prompt:'It/be',           answers:['It was'] },
+    { prompt:'we/talk',         answers:['we were talking'] },
+    { prompt:'I/not/enjoy',     answers:['I haven’t enjoyed','I have not enjoyed'] }],
+  note:'一般过去时讲发生了什么，过去进行时讲当时正在进行，现在完成时连到现在' }
+
+  ]
+},
+  {
+    id: 'opg-basic-C',
+    level: 'Basic',
+    topic: '将来时',
+    title: 'Basic 测试 C · 将来时',
+    source: 'Oxford Practice Grammar Basic · Test C',
+    items: [
+
+{ id:'bC-A', kind:'cloze',
+  ctx:'Alex 在和女朋友 Rosemary 通电话。用 shall，或 will / be going to 的缩写形式补全对话。',
+  stem:'Alex: Hi! It’s Alex here.\nRosemary: Hi! I’m drying my hair at the moment.\nAlex: Shall I ring you back?\nRosemary: No, it’s OK. ___ drying it later. How are things going?\nAlex: Not bad, thanks. What ___ on Saturday after you’ve seen your mum?\nRosemary: I’m not really sure. ___ around six in the evening?\nAlex: OK. But I may be a little late. ___ the final at tennis club in the afternoon. ___ you a ticket, if you like.\nRosemary: No thanks. It sounds a bit boring. I’m sure ___ it more on your own. Anyway, ___ some new books in town, I think, if I’ve got enough money.\nAlex: ___ you some. I’ve just been paid.\nRosemary: Don’t worry. I’ll have my credit card.',
+  blanks:[
+    { prompt:'I/finish',    answers:['I’ll finish'] },
+    { prompt:'you/do',      answers:['are you going to do'] },
+    { prompt:'we/meet up',  answers:['Shall we meet up'] },
+    { prompt:'I/watch',     answers:['I’m going to watch'] },
+    { prompt:'I/get',       answers:['I’ll get'] },
+    { prompt:'you/enjoy',   answers:['you’ll enjoy'] },
+    { prompt:'I/buy',       answers:['I’m going to buy'] },
+    { prompt:'I/lend',      answers:['I’ll lend'] }],
+  note:'已经打算好的用 be going to，说话当下才决定的用 will，提议用 Shall I / Shall we' },
+
+{ id:'bC-B', kind:'cloze',
+  ctx:'Steve 写邮件给同事 Joanna。用括号里的词配现在进行时、shall 或 will 的缩写补全。',
+  stem:'Hi Joanna,\nI’ve just arrived in Mexico City. I didn’t get much sleep on the plane so I think I’ll go to bed for an hour or two this morning. As you know from my schedule, ___ Carl this afternoon, and then ___ to Monterrey tomorrow morning. ___ you the documents after Carl has signed them? By the way, Carl says ___ to Mexico at the weekend. If ___ near the Hotel Victoria, ___ me the green folder on my desk? I forgot it, I’m afraid. Also, I’m sorry but ___ to meet you at the airport. I’m sure you’ve heard already that ___ the new headquarters building of Carl’s company in Acapulco.\nBest wishes, Steve.',
+  blanks:[
+    { prompt:'I/meet',        answers:['I’m meeting'] },
+    { prompt:'I/fly',         answers:['I’m flying'] },
+    { prompt:'I/send',        answers:['Shall I send'] },
+    { prompt:'you/come',      answers:['you’re coming'] },
+    { prompt:'you/stay',      answers:['you’re staying'] },
+    { prompt:'you/bring',     answers:['will you bring'] },
+    { prompt:'not/be able',   answers:['I won’t be able'] },
+    { prompt:'I/visit',       answers:['I’m visiting'] }],
+  note:'已经定好的安排用现在进行时；请求对方做事用 Will you…?；主动提出用 Shall I…?' },
+
+{ id:'bC-C', kind:'bank',
+  ctx:'Mike 在跟女儿说叔叔要来住的事。用方框里的词补全对话。',
+  bankWords:['I’m','taking','you’re','I’ll','am','won’t','will','Shall','arrive'],
+  stem:'Ellie: I just want to go out, Dad.\nMike: I know, but your Uncle Paul is coming tomorrow with Steve and Sara.\nMike: You know ___ moving out of your room tomorrow morning, don’t you?\nEllie: I ___ move! I don’t want to! Why should I?\nMike: We’ve talked about this already. ___ I tell Uncle Paul that he can’t come?\nEllie: Where ___ I going to sleep then?\nMike: Before they ___, we’ll make a bed for you in my room.\nEllie: OK. But that’s all ___ going to do.\nMike: Almost. Remember you’re ___ the children to the circus on Sunday.\nMike: When you get there, the kids ___ want some ice cream.\nEllie: OK. I’ll sleep in your room and ___ take little Steve and Sara to the circus.',
+  blanks:[
+    { answers:['you’re'] },{ answers:['won’t'] },{ answers:['Shall'] },{ answers:['am'] },
+    { answers:['arrive'] },{ answers:['I’m'] },{ answers:['taking'] },{ answers:['will'] },
+    { answers:['I’ll'] }],
+  note:'时间状语从句里用现在时（before they arrive），不用将来时' },
+
+{ id:'bC-D1', kind:'strike',
+  ctx:'Jasmine 在讲到了山地中心之后会怎么安排。多出来的 will 或 ’ll 点掉 —— 时间状语从句里不用将来时。',
+  stem:'You’ll meet Tim, one of the guides, as soon as you will arrive at the centre.',
+  blanks:[{ target:'will', targetTok:11 }], note:'as soon as 引导时间状语从句，用现在时' },
+{ id:'bC-D2', kind:'strike', stem:'Tim will check your bags when you will get up.',
+  blanks:[{ target:'will', targetTok:7 }], note:'when 引导时间状语从句，用现在时' },
+{ id:'bC-D3', kind:'strike', stem:'Before you’ll start walking, Tim will make sure you have your own map.',
+  blanks:[{ target:'you’ll', targetTok:1 }], note:'before 从句用现在时：Before you start walking' },
+{ id:'bC-D4', kind:'strike', stem:'You’ll be able to see the sea after you will get to the top of the mountain!',
+  blanks:[{ target:'will', targetTok:9 }], note:'after 从句用现在时' },
+{ id:'bC-D5', kind:'strike', stem:'You’ll have to listen to Tim until you’ll know the right thing to do.',
+  blanks:[{ target:'you’ll', targetTok:7 }], note:'until 从句用现在时' },
+{ id:'bC-D6', kind:'strike', stem:'You’ll enjoy the views as soon as you will get there!',
+  blanks:[{ target:'will', targetTok:8 }], note:'as soon as 从句用现在时' },
+
+{ id:'bC-E1', kind:'choice', ctx:'四个朋友在度假时的餐厅里。选出正确的将来时形式。',
+  stem:'I’ll have a chat with the waiter first when he ___ to the table.',
+  blanks:[{ answers:['comes'], options:['comes','will come'] }], note:'when 引导时间状语从句，用现在时' },
+{ id:'bC-E2', kind:'choice', stem:'We haven’t made any plans for this afternoon. What are we ___?',
+  blanks:[{ answers:['going to do'], options:['doing','going to do'] }], note:'还没定下来的安排，用 be going to' },
+{ id:'bC-E3', kind:'choice', stem:'Don’t worry. ___ you!',
+  blanks:[{ answers:['I’ll carry'], options:['I’m carrying','I’ll carry'] }], note:'当场主动提出帮忙，用 will' },
+{ id:'bC-E4', kind:'choice', stem:'After you ___ lunch, you won’t be able to carry anyone!',
+  blanks:[{ answers:['finish'], options:['finish','will finish'] }], note:'after 从句用现在时' },
+{ id:'bC-E5', kind:'choice', stem:'Don’t order too much food. ___ in a volleyball match on the beach this evening.',
+  blanks:[{ answers:['I’m playing'], options:['I’m playing','I’ll play'] }], note:'已经约好的安排，用现在进行时' },
+{ id:'bC-E6', kind:'choice', stem:'___ tell you if you agree to play a practice match with me this afternoon.',
+  blanks:[{ answers:['I’ll'], options:['I’ll','I’m going to'] }], note:'说话当下才决定的条件承诺，用 will' },
+{ id:'bC-E7', kind:'choice', stem:'___ the waiter?',
+  blanks:[{ answers:['Shall I call'], options:['Am I calling','Shall I call'] }], note:'主动提出做某事，用 Shall I…?' },
+{ id:'bC-E8', kind:'choice', stem:'___ of hunger in a moment.',
+  blanks:[{ answers:['I’m going to die'], options:['I’m dying','I’m going to die'] }], note:'根据眼前情况做预测，用 be going to' }
+
+  ]
+},
+  {
+    id: 'opg-basic-D',
+    level: 'Basic',
+    topic: '句子与疑问句',
+    title: 'Basic 测试 D · 句子与疑问句',
+    source: 'Oxford Practice Grammar Basic · Test D',
+    items: [
+
+{ id:'bD-A1', kind:'order', ctx:'一名警察在问 Raphael 几个问题。把给出的词排成一个完整的疑问句。',
+  stem:'___', hintWords:['normally','the','home','take','do','bus','you'],
+  blanks:[{ answers:['Do you normally take the bus home'] }], note:'一般现在时疑问句：Do + 主语 + 动词原形' },
+{ id:'bD-A2', kind:'cloze', stem:'Police officer: Do you normally take the bus home?\nRaphael: No, ___. I normally walk. But it was raining yesterday.',
+  blanks:[{ prompt:'简答', answers:['I don’t'] }], note:'简答要和问句的助动词对应：Do you…? → I don’t' },
+{ id:'bD-A3', kind:'order', stem:'___', hintWords:['wife','soon','is','home','coming','your'],
+  blanks:[{ answers:['Is your wife coming home soon'] }], note:'现在进行时疑问句：be + 主语 + 动词-ing' },
+{ id:'bD-A4', kind:'cloze', stem:'Police officer: Is your wife coming home soon?\nRaphael: Yes, ___. Just like yesterday.',
+  blanks:[{ prompt:'简答', answers:['she is'] }], note:'Is your wife…? → she is' },
+{ id:'bD-A5', kind:'order', stem:'___', hintWords:['by','travel','she','bus','does'],
+  blanks:[{ answers:['Does she travel by bus'] }], note:'第三人称单数疑问句：Does + 主语 + 动词原形' },
+{ id:'bD-A6', kind:'cloze', stem:'Police officer: Does she travel by bus?\nRaphael: No, ___. She runs.',
+  blanks:[{ prompt:'简答', answers:['she doesn’t'] }], note:'Does she…? → she doesn’t' },
+{ id:'bD-A7', kind:'order', stem:'___', hintWords:['she','was','yesterday','tired'],
+  blanks:[{ answers:['Was she tired yesterday'] }], note:'be 动词疑问句：Was + 主语 + 形容词' },
+{ id:'bD-A8', kind:'cloze', stem:'Police officer: Was she tired yesterday?\nRaphael: Yes, ___. Sometimes she runs too fast.',
+  blanks:[{ prompt:'简答', answers:['she was'] }], note:'Was she…? → she was' },
+
+{ id:'bD-B', kind:'cloze',
+  ctx:'Noah 要去街头问卷调查。填出每个问句开头的第一个词。',
+  stem:'___ many brothers and sisters have you got?\n___ was your childhood like?\n___ do you talk to if you need financial advice?\n___ you do your shopping in the morning, afternoon or evening?\n___ much exercise do you do?\n___ type of washing powder do you use?\n___ do you enjoy doing on Saturday nights?\n___ do English people eat so little fish?\n___ your neighbours speak to you?\n___ you born in Manchester?\n___ is your favourite TV programme?\n___ washes the dishes in your house?\n___ you go on holiday in the UK or abroad this year?\n___ is football so popular in Manchester?',
+  blanks:[
+    { answers:['How'] },{ answers:['What'] },{ answers:['Who'] },{ answers:['Do'] },
+    { answers:['How'] },{ answers:['What'] },{ answers:['What'] },{ answers:['Why'] },
+    { answers:['Do'] },{ answers:['Were'] },{ answers:['What'] },{ answers:['Who'] },
+    { answers:['Did'] },{ answers:['Why'] }],
+  note:'疑问词问具体内容，助动词 Do / Did / Were 开头的是一般疑问句' },
+
+{ id:'bD-C', kind:'cloze',
+  ctx:'Joan 说她和丈夫什么都合得来。用 so 或 neither 把句子补完整。',
+  stem:'He won’t eat anything yellow, and neither will I. We enjoy walking sometimes, but he prefers sitting in the garden and ___. I can play the piano, and ___, so we play together in the evenings. He has been to Egypt, and ___, but we both went there before we met. I don’t like long films on the TV, and ___. We always fall asleep before the end. He had a very lonely childhood, I’m afraid, and ___. I’ll never forget the first time we met, and ___. We were in a music shop and he began playing my favourite song on the piano. He hasn’t stopped playing, and ___!',
+  blanks:[
+    { answers:['so do I'] },{ answers:['so can he'] },{ answers:['so have I'] },
+    { answers:['neither does he'] },{ answers:['so did I'] },{ answers:['neither will he'] },
+    { answers:['neither have I'] }],
+  note:'肯定句后用 so + 助动词 + 主语；否定句后用 neither + 助动词 + 主语' },
+
+{ id:'bD-D', kind:'cloze',
+  ctx:'Chloe 买了一艘二手帆船，Adam 在打听。每个空填三个词，都要用上 how。',
+  stem:'Adam: It looks fantastic! How long is it?\nChloe: 20 metres. I’m going to sail to the Greek islands next month.\nAdam: That sounds nice. ___ that?\nChloe: I’m not sure. About 1,000 kilometres.\nAdam: It looks fairly new. ___ it?\nChloe: Six and a half years.\nAdam: I would use it every weekend, if it was mine. ___ you going to use it?\nChloe: At least once a month, probably.\nAdam: ___ you go for?\nChloe: Two or three days at a time, I think.\nAdam: By the way, ___ it cost?\nChloe: I can’t tell you. I don’t want to remember!',
+  blanks:[
+    { prompt:'三个词', answers:['How far is'] },
+    { prompt:'三个词', answers:['How old is'] },
+    { prompt:'三个词', answers:['How often are','How much are'] },
+    { prompt:'三个词', answers:['How long will'] },
+    { prompt:'三个词', answers:['How much did'] }],
+  note:'how far 问距离，how old 问年头，how often 问频率，how long 问时长，how much 问价钱' },
+
+{ id:'bD-E', kind:'cloze',
+  ctx:'John 和 Paul 在聊刚看完的戏。给每一句配上正确的反意疑问句。',
+  stem:'John: That was an interesting play, wasn’t it?\nPaul: You didn’t like the main actor, ___?\nJohn: Not exactly. He’s in that TV programme, ___?\nPaul: I think so. He plays the boy’s father, ___?\nJohn: That’s right. I couldn’t hear him tonight. He hasn’t got a very loud voice, ___?\nPaul: No, not at all. You just can’t hear actors these days, ___?\nJohn: That’s because they work in TV, ___?\nPaul: I suppose so. More money. He won’t earn so much tonight, ___?\nJohn: He was terrible, so he shouldn’t earn so much tonight, ___?\nPaul: No. You’re right. He wasn’t great, ___?\nJohn: Anyway, you didn’t pay very much for the tickets, ___?\nPaul: I can’t remember. They were free, ___?\nJohn: That’s OK, then, ___?',
+  blanks:[
+    { answers:['did you'] },{ answers:['isn’t he'] },{ answers:['doesn’t he'] },{ answers:['has he'] },
+    { answers:['can you'] },{ answers:['don’t they'] },{ answers:['will he'] },{ answers:['should he'] },
+    { answers:['was he'] },{ answers:['did you'] },{ answers:['weren’t they'] },{ answers:['isn’t it'] }],
+  note:'前面肯定，反意问句用否定；前面否定，反意问句用肯定' }
+
+  ]
+},
+  {
+    id: 'opg-basic-E',
+    level: 'Basic',
+    topic: '情态动词',
+    title: 'Basic 测试 E · 情态动词',
+    source: 'Oxford Practice Grammar Basic · Test E',
+    items: [
+
+{ id:'bE-A1', kind:'choice', ctx:'Chris 要去苏格兰的 Carstairs 学院，Miranda 已经在那儿念书。选出正确的情态动词形式。',
+  stem:'___ get as much information as possible before you go.',
+  blanks:[{ answers:['You ought to','You should'], options:['You should','You ought to'] }],
+  note:'should 和 ought to 意思一样，这里两个都成立（原书把 should 划掉了，但 You should get 本身没错）' },
+{ id:'bE-A2', kind:'choice', stem:'Do ___ wear a uniform?',
+  blanks:[{ answers:['I have to'], options:['I must','I have to'] }], note:'问「有没有必要」用 Do I have to…?，must 不能这样用在 Do 后面' },
+{ id:'bE-A3', kind:'choice', stem:'No, but ___ dress smartly. You can’t wear jeans.',
+  blanks:[{ answers:['you must'], options:['you must','you have'] }], note:'have 后面要加 to；这里用 must 最直接' },
+{ id:'bE-A4', kind:'choice', stem:'___ take my laptop with me?',
+  blanks:[{ answers:['Should I'], options:['Should I','Had I'] }], note:'征求建议用 Should I…?' },
+{ id:'bE-A5', kind:'choice', stem:'No, ___! You have to write all your essays by hand!',
+  blanks:[{ answers:['you don’t need to'], options:['you don’t ought','you don’t need to'] }], note:'ought 没有 don’t ought 这种否定形式' },
+{ id:'bE-A6', kind:'choice', stem:'Will ___ to use email?',
+  blanks:[{ answers:['I be able'], options:['I be possible','I be able'] }], note:'人做主语用 be able to，possible 的主语是事情' },
+{ id:'bE-A7', kind:'choice', stem:'___ to get a ticket for the train this evening.',
+  blanks:[{ answers:['I managed'], options:['I managed','I could'] }], note:'could 后面直接跟动词原形，不加 to；讲「成功做到了某一件事」用 managed to' },
+{ id:'bE-A8', kind:'choice', stem:'___ have reserved a seat, though.',
+  blanks:[{ answers:['I should'], options:['I should','I must'] }], note:'should have done 表示「当初本该做而没做」' },
+{ id:'bE-A9', kind:'choice', stem:'___ have to stand all the way to Scotland.',
+  blanks:[{ answers:['I may'], options:['I can','I may'] }], note:'讲可能性用 may' },
+{ id:'bE-A10', kind:'choice', stem:'___ give you a ring later and see how things are going?',
+  blanks:[{ answers:['Had I better'], options:['Should I better','Had I better'] }], note:'固定说法是 had better，没有 should better' },
+{ id:'bE-A11', kind:'choice', stem:'But ___ switch it off during the school day.',
+  blanks:[{ answers:['you must'], options:['you need','you must'] }], note:'讲规定用 must；need 这样用要加 to' },
+{ id:'bE-A12', kind:'choice', stem:'___ visit the lake near the college. It’s beautiful!',
+  blanks:[{ answers:['You must'], options:['You must','You ought'] }], note:'ought 后面必须加 to，光写 You ought visit 不对' },
+
+{ id:'bE-B', kind:'bank',
+  ctx:'Olivia 写邮件给 Sarah，文章里每处都漏了一个词。用方框里的词补回去。',
+  bankWords:['had','managed','couldn’t','able','ought','have','needn’t','to'],
+  stem:'I’ve had a terrible day! I should have got up early, but I couldn’t get out of bed! It was too late to go by bus, so I ___ to get a taxi. Luckily, I ___ to find one quite quickly. Of course, when we arrived outside the office, I didn’t have any money, so I ___ pay the driver. Anyway, I was ___ to borrow some from the receptionist. I’ve paid her back already, but do you think I ___ to give her a present as well? My boss was waiting for me in her office. I should ___ arrived at nine o’clock, and I was half an hour late. I ___ have taken a taxi at all, though! She told me the company was closing, so I had ___ find a new job!',
+  blanks:[
+    { answers:['had'] },{ answers:['managed'] },{ answers:['couldn’t'] },{ answers:['able'] },
+    { answers:['ought'] },{ answers:['have'] },{ answers:['needn’t'] },{ answers:['to'] }],
+  note:'had to 不得不，managed to 设法做到，be able to 能够，ought to 应该，should have done 本该，needn’t have done 本来不必' },
+
+{ id:'bE-C1', kind:'cloze', ctx:'Buck 夫妇在决定度假带什么。用括号里的词把句子改写完整。',
+  stem:'原句：The hotels will be full, possibly.（might）\nThe ___',
+  blanks:[{ prompt:'改写', answers:['hotels might be full'] }], note:'might 表示有可能' },
+{ id:'bE-C2', kind:'cloze', stem:'原句：Then it will be necessary to sleep in the car.（have）\nThen we ___',
+  blanks:[{ prompt:'改写', answers:['’ll have to sleep in the car','will have to sleep in the car'] }], note:'将来的必要性用 will have to' },
+{ id:'bE-C3', kind:'cloze', stem:'原句：I’m sure it’s the sun cream we got in Brighton.（must）\nIt ___',
+  blanks:[{ prompt:'改写', answers:['must be the sun cream we got in Brighton'] }], note:'很有把握的推断用 must be' },
+{ id:'bE-C4', kind:'cloze', stem:'原句：It wasn’t necessary to buy it.（needn’t）\nWe ___',
+  blanks:[{ prompt:'改写', answers:['needn’t have bought it'] }], note:'needn’t have done：当初其实不必做却做了' },
+{ id:'bE-C5', kind:'cloze', stem:'原句：Is it a good idea to take it with us this time?（Should）\n___',
+  blanks:[{ prompt:'改写', answers:['Should we take it with us this time'] }], note:'征求意见用 Should we…?' },
+{ id:'bE-C6', kind:'cloze', stem:'原句：It’s not possible for us to make the sun shine.（can’t）\nWe ___',
+  blanks:[{ prompt:'改写', answers:['can’t make the sun shine'] }], note:'做不到用 can’t' },
+{ id:'bE-C7', kind:'cloze', stem:'原句：Maybe you should have a rest.（better）\n___',
+  blanks:[{ prompt:'改写', answers:['You’d better have a rest','You had better have a rest'] }], note:'给建议用 had better' },
+
+{ id:'bE-D', kind:'bank',
+  ctx:'Michael 正要做演讲。用方框里的词组补全他说的话。',
+  bankWords:['Do I need to use','should really','could you pass','don’t need to','mustn’t forget','got to finish','better start','might not','should have'],
+  stem:'Can you hear me at the back of the hall? ___ the microphone? Oh dear, it isn’t working! You ___ move to the front if you can. Excuse me, ___ this information around? Thank you. Have I brought enough copies? I haven’t? I’m so sorry. Sir, I can see you don’t have a seat, but you ___ write anything in my presentation. I’ll put everything on my website. I ___ to give you the address at the end. Now, I’ve ___ in 30 minutes, so we’d ___. I’m sorry, Madam, but you ___ be able to see the screen unless you move forward. Anyway, I ___ started five minutes ago. Right, where are my notes?',
+  blanks:[
+    { answers:['Do I need to use'] },{ answers:['should really'] },{ answers:['could you pass'] },
+    { answers:['don’t need to'] },{ answers:['mustn’t forget'] },{ answers:['got to finish'] },
+    { answers:['better start'] },{ answers:['might not'] },{ answers:['should have'] }],
+  note:'need to 需要，mustn’t 禁止，have got to 必须，had better 最好，might not 也许不' },
+
+{ id:'bE-E1', kind:'fix', ctx:'四个朋友在咖啡馆。划线的情态动词错了就点出来改掉；对的就点「这句没错」。',
+  stem:'You’ll have to answer it if you want to know!',
+  blanks:[{ target:null, answers:[] }], note:'将来的必要性用 will have to，本来就对' },
+{ id:'bE-E2', kind:'fix', stem:'It needn’t be Alice. She’s in New York.',
+  tokens:['It needn’t be','Alice.','She’s','in','New','York.'],
+  blanks:[{ target:'It needn’t be', answers:['It can’t be'] }], note:'有把握的否定推断用 can’t be，不是 needn’t be' },
+{ id:'bE-E3', kind:'fix', stem:'She must go there on business last Monday.',
+  blanks:[{ target:'must', answers:['had to'] }], note:'过去的必要性用 had to，must 没有过去式' },
+{ id:'bE-E4', kind:'fix', stem:'Then it must be her sister or something.',
+  blanks:[{ target:null, answers:[] }], note:'有把握的推断用 must be，本来就对' },
+{ id:'bE-E5', kind:'fix', stem:'But she should have your number!',
+  tokens:['But','she should have','your','number!'],
+  blanks:[{ target:'she should have', answers:['she must have'] }], note:'根据情况推断「一定有」用 must have' },
+{ id:'bE-E6', kind:'fix', stem:'Well, she could be the girl who looks like Alice.',
+  blanks:[{ target:null, answers:[] }], note:'表示可能用 could be，本来就对' },
+{ id:'bE-E7', kind:'fix', stem:'Shall I speak to her?',
+  blanks:[{ target:null, answers:[] }], note:'主动提出做某事用 Shall I…?，本来就对' },
+{ id:'bE-E8', kind:'fix', stem:'You don’t ought to, because she’s coming over now.',
+  tokens:['You don’t ought','to,','because','she’s','coming','over','now.'],
+  blanks:[{ target:'You don’t ought', answers:['You don’t need','You don’t have'] }], note:'ought 没有 don’t ought 这种否定形式' },
+{ id:'bE-E9', kind:'fix', stem:'Have a seat. Can I get you a coffee?',
+  blanks:[{ target:null, answers:[] }], note:'主动提供帮助用 Can I…?，本来就对' }
+
+  ]
+},
+  {
+    id: 'opg-basic-F',
+    level: 'Basic',
+    topic: '冠词、名词、代词',
+    title: 'Basic 测试 F · 冠词、名词、代词',
+    source: 'Oxford Practice Grammar Basic · Test F',
+    items: [
+
+{ id:'bF-A1', kind:'strike', ctx:'这是琴行的一则广告。每行多出了一两个 a / an / the，把多余的点掉。',
+  stem:'Would you like to learn to play the a piano?',
+  blanks:[{ target:'a', targetTok:8 }], note:'乐器前用 the：play the piano' },
+{ id:'bF-A2', kind:'strike', stem:'All you need is half a an hour a day and a the simple book!',
+  blanks:[{ target:'a', targetTok:5 },{ target:'the', targetTok:12 }], note:'元音音素前用 an；泛指一本书用 a' },
+{ id:'bF-A3', kind:'strike', stem:'What’s the name of the a book?',
+  blanks:[{ target:'a', targetTok:5 }], note:'特指刚提到的那本书，用 the' },
+{ id:'bF-A4', kind:'strike', stem:'The friends are great, but the music will be your partner forever!',
+  blanks:[{ target:'The', targetTok:0 },{ target:'the', targetTok:5 }], note:'泛指「朋友」「音乐」这类概念时不加冠词' },
+{ id:'bF-A5', kind:'strike', stem:'You’ll also get the a free download of piano music from around a the world!',
+  blanks:[{ target:'the', targetTok:3 },{ target:'a', targetTok:12 }], note:'泛指一次下载用 a；the world 是独一无二的事物' },
+
+{ id:'bF-B', kind:'bank',
+  ctx:'William 一家要去度假。用方框里的词补全对话 —— 有一个词用不上。',
+  bankWords:['everywhere','anybody','someone','everyone','somewhere','nothing','nobody'],
+  stem:'William: Has anyone seen the big blue beach ball? I can’t find it anywhere.\nChloe: Have you looked in the cupboard under the stairs?\nWilliam: Yes, there’s ___ there. Only a box.\nChloe: And did you look in the box?\nWilliam: Of course. I’ve looked ___.\nChloe: Well, it must be ___.\nDan: Come on, ___, let’s help Dad find the blue beach ball!\nMichelle: But ___ could find it last year, or the year before.\nWilliam: Surely ___ has seen it?\nChloe: Do you know what I think? I think we’ve never had a blue beach ball.',
+  blanks:[{ answers:['nothing'] },{ answers:['everywhere'] },{ answers:['somewhere'] },
+          { answers:['everyone'] },{ answers:['nobody'] },{ answers:['someone'] }],
+  note:'some- 用于肯定句，any- 用于否定和疑问，no- 本身就是否定，every- 指全部' },
+
+{ id:'bF-C1', kind:'choice', ctx:'Cathy 和 Alice 在聊大英博物馆。每个空填 a、an、the，或者不填冠词（–）。',
+  stem:'Cathy: Have you been to the British Museum yet?\nAlice: I don’t even know where it is, I’m afraid.\nCathy: It’s in ___ street near Tottenham Court Road.\nAlice: What’s the name of ___ street?\nCathy: Russell Street. The mummies from Ancient Egypt are on ___ first floor.',
+  blanks:[{ answers:['a'], options:['a','an','the','–'] },
+          { answers:['the'], options:['a','an','the','–'] },
+          { answers:['the'], options:['a','an','the','–'] }],
+  note:'第一次提到用 a，再次提到同一个用 the；序数词前用 the' },
+{ id:'bF-C2', kind:'choice',
+  stem:'Alice: I’d love to see ___ Egyptian mummy. People say that when kings died, the ancient Egyptians gave them ___ food and ___ water to take to the next world.',
+  blanks:[{ answers:['an'], options:['a','an','the','–'] },
+          { answers:['–'], options:['a','an','the','–'] },
+          { answers:['–'], options:['a','an','the','–'] }],
+  note:'Egyptian 以元音音素开头用 an；food、water 是不可数的泛指，不加冠词' },
+{ id:'bF-C3', kind:'choice',
+  stem:'Alice: They were part of ___ Parthenon in Athens, and Lord Elgin brought them back to London 200 years ago. Now they’re in the British Museum, but ___ Greek Government wants them back in Athens.\nCathy: If we send ___ Marbles back to ___ Greece, we’ll have to send everything back in the end, won’t we?',
+  blanks:[{ answers:['the'], options:['a','an','the','–'] },
+          { answers:['the'], options:['a','an','the','–'] },
+          { answers:['the'], options:['a','an','the','–'] },
+          { answers:['–'], options:['a','an','the','–'] }],
+  note:'独一无二的建筑、机构前用 the；大多数国家名前不加冠词' },
+{ id:'bF-C4', kind:'choice',
+  stem:'Cathy: So all ___ paintings by Picasso in museums around the world would go back to Spain?\nAlice: Yes. I think it’s ___ good idea. Everyone would have to travel to ___ countries that made these famous things.',
+  blanks:[{ answers:['the'], options:['a','an','the','–'] },
+          { answers:['a'], options:['a','an','the','–'] },
+          { answers:['the'], options:['a','an','the','–'] }],
+  note:'后面有限定说明（by Picasso / that made…）时用 the；a good idea 是泛指一个想法' },
+
+{ id:'bF-D1', kind:'fix', ctx:'两个学生在咖啡馆聊回墨西哥的事。划线部分错了就点出来改掉，对的点「这句没错」。',
+  stem:'So, how many bags have you packed?',
+  blanks:[{ target:null, answers:[] }], note:'bags 可数，用 how many' },
+{ id:'bF-D2', kind:'fix', stem:'How many luggage have you got?',
+  tokens:['How many','luggage','have','you','got?'],
+  blanks:[{ target:'How many', answers:['How much'] }], note:'luggage 不可数，用 how much' },
+{ id:'bF-D3', kind:'fix', stem:'Too much. I’ll have to post some of it.',
+  blanks:[{ target:null, answers:[] }], note:'指不可数的行李，too much 没错' },
+{ id:'bF-D4', kind:'fix', stem:'How much costs it to post things?',
+  tokens:['How much costs it','to','post','things?'],
+  blanks:[{ target:'How much costs it', answers:['How much does it cost'] }], note:'疑问句要用助动词：How much does it cost…?' },
+{ id:'bF-D5', kind:'fix', stem:'I’m OK at the moment, but I haven’t bought some presents yet.',
+  tokens:['I’m','OK','at','the','moment,','but','I','haven’t','bought','some presents','yet.'],
+  blanks:[{ target:'some presents', answers:['any presents'] }], note:'否定句里一般用 any' },
+{ id:'bF-D6', kind:'fix', stem:'I’m waiting for my Dad to send me any more money!',
+  tokens:['I’m','waiting','for','my','Dad','to','send','me','any more','money!'],
+  blanks:[{ target:'any more', answers:['some more'] }], note:'肯定句里用 some more' },
+{ id:'bF-D7', kind:'fix', stem:'How many presents are you going to buy, then?',
+  blanks:[{ target:null, answers:[] }], note:'presents 可数，用 how many' },
+{ id:'bF-D8', kind:'fix', stem:'A lot! I’ve got a big family.',
+  blanks:[{ target:null, answers:[] }], note:'a lot 可以单独用，没错' },
+{ id:'bF-D9', kind:'fix', stem:'I’m only going to get a little things.',
+  tokens:['I’m','only','going','to','get','a little things.'],
+  blanks:[{ target:'a little things.', answers:['a few things'] }], note:'things 可数，用 a few' },
+{ id:'bF-D10', kind:'fix', stem:'Can you give me an advice?',
+  tokens:['Can','you','give','me','an advice?'],
+  blanks:[{ target:'an advice?', answers:['some advice','any advice'] }], note:'advice 不可数，不能用 an' },
+{ id:'bF-D11', kind:'fix', stem:'Well, you could get a lot of small presents, I suppose.',
+  blanks:[{ target:null, answers:[] }], note:'a lot of 可数不可数都能用' },
+{ id:'bF-D12', kind:'fix', stem:'Or just a little, big ones.',
+  tokens:['Or','just','a little, big ones.'],
+  blanks:[{ target:'a little, big ones.', answers:['a few big ones'] }], note:'ones 可数，用 a few' },
+{ id:'bF-D13', kind:'fix', stem:'Do you want some more coffee? I think there’s a few more in the pot.',
+  tokens:['Do','you','want','some','more','coffee?','I','think','there’s','a few more','in','the','pot.'],
+  blanks:[{ target:'a few more', answers:['a little more','a bit more'] }], note:'coffee 不可数，用 a little / a bit' },
+{ id:'bF-D14', kind:'fix', stem:'No thanks, I haven’t got a lot of time.',
+  blanks:[{ target:null, answers:[] }], note:'a lot of 配不可数的 time 没问题' },
+
+{ id:'bF-E', kind:'bank',
+  ctx:'John 搬走了，室友 Steve 给他发邮件。用方框里的词补全 —— them 出现两次。',
+  bankWords:['me','mine','one','ones','some','that','them','them','there','there’s','yours','yourself'],
+  stem:'Hi John,\nAre you sure that you’ve taken all your things? I’m sure ___ green football on top of the wardrobe isn’t mine, and ___ an expensive black fountain pen on the table which is ___. And did you give ___ the book on fishing, or did you buy it for ___? I can’t remember. There are ___ purple socks with Mickey Mouse on ___. Are those the ___ you bought at the market? Also, ___ are no sheets left on your bed. But the sheets were ___, weren’t they? I lent ___ to you, and I want them back! Finally, I’m sure I bought two big cakes yesterday. You haven’t taken ___, have you?\nSteve',
+  blanks:[{ answers:['that'] },{ answers:['there’s'] },{ answers:['yours'] },{ answers:['me'] },
+          { answers:['yourself'] },{ answers:['some'] },{ answers:['them'] },{ answers:['ones'] },
+          { answers:['there'] },{ answers:['mine'] },{ answers:['them'] },{ answers:['one'] }],
+  note:'mine / yours 是名词性物主代词；one / ones 代替前面提过的名词；there is / there are 表示「有」' }
+
+  ]
+},
+  {
+    id: 'opg-basic-G',
+    level: 'Basic',
+    topic: '形容词与副词',
+    title: 'Basic 测试 G · 形容词与副词',
+    source: 'Oxford Practice Grammar Basic · Test G',
+    items: [
+
+{ id:'bG-A', kind:'cloze',
+  ctx:'两个邻居在互相攀比。用括号里词的比较级或最高级补全对话。',
+  stem:'Sam: I’m pretty sure my house is a bit bigger than yours.\nPete: Really? I thought mine was ___ in the street.\nSam: Oh. Anyway, my daughter Jo is ___ girl in her class.\nPete: That reminds me. I saw you and Jo pushing your car last week. I must say my car works ___ than yours.\nSam: Really? What’s ___ you’ve ever driven? We’ve crossed America from coast to coast in my car.\nPete: Your wife didn’t enjoy the journey, though, did she? You know, I think I’ve been ___ married than you.\nSam: I’m not surprised. You’ve bought your wife ___ presents in the world, haven’t you?\nPete: Well, I’ve got enough money. I suppose I work ___ than you, don’t I, and earn money ___?\nSam: I think we’d have a fight if you weren’t ___ man in town.',
+  blanks:[
+    { prompt:'big',       answers:['the biggest'] },
+    { prompt:'bright',    answers:['the brightest'] },
+    { prompt:'good',      answers:['better'] },
+    { prompt:'far',       answers:['the farthest','the furthest'] },
+    { prompt:'happy',     answers:['more happily'] },
+    { prompt:'expensive', answers:['the most expensive'] },
+    { prompt:'hard',      answers:['harder'] },
+    { prompt:'quick',     answers:['more quickly'] },
+    { prompt:'tall',      answers:['the tallest'] }],
+  note:'短形容词加 -er / -est，长的用 more / the most；修饰动词要用副词（happily、quickly）' },
+
+{ id:'bG-B1', kind:'choice', ctx:'Jasmine 刚到意大利一个小镇，给英国的朋友 Mia 写邮件。选出括号里正确的那个词。',
+  stem:'I was ___ , of course, on the way here, but the journey was ___ .',
+  blanks:[{ answers:['excited'], options:['excited','exciting'] },
+          { answers:['tiring'], options:['tired','tiring'] }],
+  note:'-ed 说人的感受，-ing 说事物本身给人的感觉' },
+{ id:'bG-B2', kind:'choice', stem:'It’s ___ a beautiful house! I’m a bit ___ , though.',
+  blanks:[{ answers:['such'], options:['so','such'] },
+          { answers:['worried'], options:['worried','worrying'] }],
+  note:'such + (a) + 形容词 + 名词；so 直接加形容词' },
+{ id:'bG-B3', kind:'choice', stem:'Life here for the next six months is going to be very ___ . On the ___ of June, there’s a festival in the village.',
+  blanks:[{ answers:['quiet'], options:['quietly','quiet'] },
+          { answers:['16th'], options:['16','16th'] }],
+  note:'be 动词后面用形容词；日期用序数词' },
+{ id:'bG-B4', kind:'choice', stem:'I will be ___ if I don’t get a message now and again. I met my neighbour just after I arrived. She was ___ helpful!',
+  blanks:[{ answers:['disappointed'], options:['disappointed','disappointing'] },
+          { answers:['so'], options:['so','such'] }],
+  note:'人失望用 -ed；so 后面直接跟形容词，没有名词' },
+{ id:'bG-B5', kind:'choice', stem:'She got married last month, and it’s her ___ birthday tomorrow. She speaks English ___ , and she sings ___ .',
+  blanks:[{ answers:['28th'], options:['28','28th'] },
+          { answers:['well'], options:['good','well'] },
+          { answers:['beautifully'], options:['beautifully','beautiful'] }],
+  note:'修饰动词 speaks / sings 要用副词：well、beautifully' },
+{ id:'bG-B6', kind:'choice', stem:'You know I’m going to try to write a book about my father, so I won’t be ___ here. I’m a ___ writer, but I think it will be an ___ story in the end.',
+  blanks:[{ answers:['bored'], options:['boring','bored'] },
+          { answers:['slow'], options:['slowly','slow'] },
+          { answers:['interesting'], options:['interesting','interested'] }],
+  note:'人觉得无聊用 bored；修饰名词 writer / story 用形容词' },
+
+{ id:'bG-C1', kind:'cloze', ctx:'四位家长在聊各自的孩子。用给出的句型把画线部分改写出来。',
+  stem:'原句：Our son Andy didn’t watch the football match with me on Saturday. He was too tired!\n改写：___ too tired to ___!',
+  blanks:[{ prompt:'谁', answers:['Andy was','Our son Andy was','He was'] },
+          { prompt:'做什么', answers:['watch the football match','watch the football match with me on Saturday'] }],
+  note:'too + 形容词 + to do：太…以至于做不了' },
+{ id:'bG-C2', kind:'cloze', stem:'原句：Our oldest boy, Sam, is 25 now. He can’t buy a house. He hasn’t got enough money.\n改写：___ enough money to ___.',
+  blanks:[{ prompt:'谁', answers:['He hasn’t got','Sam hasn’t got'] },
+          { prompt:'做什么', answers:['buy a house'] }],
+  note:'enough + 名词 + to do：够…去做某事' },
+{ id:'bG-C3', kind:'cloze', stem:'原句：We didn’t buy it because it was really expensive.\n改写：___ so expensive that ___.',
+  blanks:[{ prompt:'主语', answers:['It was'] },
+          { prompt:'结果', answers:['we didn’t buy it'] }],
+  note:'so + 形容词 + that + 结果' },
+{ id:'bG-C4', kind:'cloze', stem:'原句：I’ve never seen a more beautiful machine!\n改写：It’s the ___ I’ve ever seen!',
+  blanks:[{ prompt:'最高级', answers:['most beautiful machine'] }], note:'「从没见过更…的」＝「这是我见过最…的」' },
+{ id:'bG-C5', kind:'cloze', stem:'原句：And you drive wonderfully, Tom!\n改写：And you’re ___!',
+  blanks:[{ prompt:'改成名词说法', answers:['a wonderful driver, Tom','a wonderful driver'] }], note:'副词修饰动词 → 形容词修饰名词' },
+{ id:'bG-C6', kind:'cloze', stem:'原句：I’m not as fast as Raphael.\n改写：Raphael ___.',
+  blanks:[{ prompt:'比较级', answers:['is faster than me','is faster than I am'] }], note:'not as … as 反过来说就是比较级' },
+{ id:'bG-C7', kind:'cloze', stem:'原句：Raphael is the worst driver I’ve ever met!\n改写：I’ve never ___.',
+  blanks:[{ prompt:'改写', answers:['met a worse driver','met a worse driver than Raphael'] }], note:'最高级反过来说＝never + 比较级' },
+{ id:'bG-C8', kind:'cloze', stem:'原句：You don’t open your eyes in the car. You’re too frightened.\n改写：___ too frightened to ___.',
+  blanks:[{ prompt:'谁', answers:['You’re','You are'] },
+          { prompt:'做什么', answers:['open your eyes in the car','open your eyes'] }],
+  note:'too + 形容词 + to do' },
+{ id:'bG-C9', kind:'cloze', stem:'原句：I’m not going to argue with you. I haven’t got enough time.\n改写：___ enough time to ___.',
+  blanks:[{ prompt:'谁', answers:['I haven’t got'] },
+          { prompt:'做什么', answers:['argue with you'] }],
+  note:'enough + 名词 + to do' },
+
+{ id:'bG-D1', kind:'order', ctx:'把括号里的词排成正确的顺序，补全这段介绍 Bath 的文字。',
+  stem:'___', hintWords:['for four or five days','stay','usually','there'],
+  blanks:[{ answers:['usually stay there for four or five days'] }], note:'频率副词放在实义动词前面' },
+{ id:'bG-D2', kind:'order', stem:'___', hintWords:['the','Roman','old','amazing','Baths'],
+  blanks:[{ answers:['the amazing old Roman Baths'] }], note:'形容词顺序：评价 → 年代 → 来源' },
+{ id:'bG-D3', kind:'order', stem:'___', hintWords:['probably','will','a bus','up to the Royal Crescent','take'],
+  blanks:[{ answers:['will probably take a bus up to the Royal Crescent'] }], note:'probably 放在助动词后面、实义动词前面' },
+{ id:'bG-D4', kind:'order', stem:'___', hintWords:['beautiful','parks','in one of Bath’s','green','can either relax'],
+  blanks:[{ answers:['can either relax in one of Bath’s beautiful green parks'] }], note:'形容词顺序：评价 → 颜色' },
+{ id:'bG-D5', kind:'order', stem:'___', hintWords:['the','18th-century','elegant','very','Pump Rooms'],
+  blanks:[{ answers:['the very elegant 18th-century Pump Rooms'] }], note:'very 修饰它后面那个形容词' },
+{ id:'bG-D6', kind:'order', stem:'___', hintWords:['to get','tickets','difficult','always','it’s'],
+  blanks:[{ answers:['it’s always difficult to get tickets'] }], note:'always 放在 be 动词后面' },
+{ id:'bG-D7', kind:'order', stem:'___', hintWords:['American','unusual','the','really','Museum'],
+  blanks:[{ answers:['the really unusual American Museum'] }], note:'really 修饰形容词 unusual' },
+{ id:'bG-D8', kind:'order', stem:'___', hintWords:['can','peacefully in the countryside','drive around','just'],
+  blanks:[{ answers:['can just drive around peacefully in the countryside'] }], note:'just 放在助动词后面' },
+
+{ id:'bG-E', kind:'bank',
+  ctx:'Esther 给 Helen 留了一条语音留言。用方框里的词补全。',
+  bankWords:['as far as','garden','on the left','upstairs','away','crates','fairly','sideways','address','table','outside'],
+  stem:'Hi there Helen! I thought you’d be at home. Oh dear. Anyway, I’m going ___ for a few days. I’m leaving the car ___, though. It’s ___ old, like me, and the garage is full of old ___. I’ve lost my ___ book, but I think I know the way to The Grange. You take the train ___ Little Hollow, and then it’s ___ when you leave the station. Anyway, the weather looks good, so if you want to borrow my ___ chairs while I’m away, go ___, turn left and they’re in that little cupboard. You’ll have to go into the cupboard ___, I’m afraid, because it’s full of old ___ legs and things like that! Anyway, I’d better go. Bye for now!',
+  blanks:[{ answers:['away'] },{ answers:['outside'] },{ answers:['fairly'] },{ answers:['crates'] },
+          { answers:['address'] },{ answers:['as far as'] },{ answers:['on the left'] },{ answers:['garden'] },
+          { answers:['upstairs'] },{ answers:['sideways'] },{ answers:['table'] }],
+  note:'表地点、方向的副词（away、outside、upstairs、sideways）；名词也能当定语用（address book、garden chairs、table legs）' }
+
+  ]
+},
+  {
+    id: 'opg-basic-H',
+    level: 'Basic',
+    topic: '介词',
+    title: 'Basic 测试 H · 介词',
+    source: 'Oxford Practice Grammar Basic · Test H',
+    items: [
+
+{ id:'bH-A', kind:'cloze',
+  ctx:'本地电台的天气预报。把缺的词填出来 —— 括号里给了首字母。',
+  stem:'Good morning. This is the weather at six o’clock in the morning ___ Thursday 7 February. It’s cold ___, and there’s ice ___ the roads, so don’t drive too close to the car ___ of you! There should be 40 metres ___ you and that car! If you’re driving ___ the city ___ morning, pay attention to schoolchildren walking ___ the road. Remember, you might be ___ a school! Traffic is moving very slowly ___ the city centre at the moment. There was an accident ___ night, so if you’re driving ___ Central Library, the police may stop you. More weather news ___ hour, ___ six ___ the morning ___ six at night.',
+  blanks:[
+    { prompt:'o…',    answers:['on'] },
+    { prompt:'o…',    answers:['outside'] },
+    { prompt:'o…',    answers:['on'] },
+    { prompt:'i… f…', answers:['in front'] },
+    { prompt:'b…',    answers:['between'] },
+    { prompt:'i…',    answers:['in'] },
+    { prompt:'t…',    answers:['this'] },
+    { prompt:'a…',    answers:['along'] },
+    { prompt:'n… t…', answers:['next to'] },
+    { prompt:'t…',    answers:['through'] },
+    { prompt:'l…',    answers:['last'] },
+    { prompt:'p…',    answers:['past'] },
+    { prompt:'e…',    answers:['every'] },
+    { prompt:'f…',    answers:['from'] },
+    { prompt:'i…',    answers:['in'] },
+    { prompt:'t…',    answers:['to'] }],
+  note:'具体日期前用 on，月份年份前用 in；this morning / last night / every hour 前面不加介词' },
+
+{ id:'bH-B', kind:'bank',
+  ctx:'Anthony 和 Michelle 在聊学语言。用方框里的词补全 —— 有两个用不上。',
+  bankWords:['at','by','by','in','good','of','with','with','with','worth','without'],
+  stem:'Anthony: Jack says he can learn a new language without working.\nMichelle: Who’s Jack?\nAnthony: He’s that new boy ___ the bright blue jumper. The one ___ long hair. He’s bought an audiobook, and he says he learns ___ listening to it while he’s asleep.\nMichelle: I think that’s silly.\nAnthony: But you’re good ___ learning new words, aren’t you? I’m sick ___ making mistakes all the time.\nMichelle: It’s no use worrying about mistakes. We learn ___ making mistakes.\nAnthony: It’s easy for you. You can pass French exams ___ doing much work.\nMichelle: I just sit down ___ a dictionary and a French newspaper. It’s not ___ buying an expensive audiobook, in my view.',
+  blanks:[{ answers:['in'] },{ answers:['with'] },{ answers:['by'] },{ answers:['at'] },{ answers:['of'] },
+          { answers:['by'] },{ answers:['without'] },{ answers:['with'] },{ answers:['worth'] }],
+  note:'by + 动名词表示方式，without + 动名词表示「没有做…就…」；be good at、be sick of、be worth doing 是固定搭配' },
+
+{ id:'bH-C1', kind:'choice', ctx:'Melanie 写邮件给 Emilia。选出正确的那个词。',
+  stem:'It’s too hot to work. The office is ___ an oven ___ the moment.',
+  blanks:[{ answers:['like'], options:['as','like'] },{ answers:['at'], options:['on','at'] }],
+  note:'like 用来打比方；at the moment 是固定搭配' },
+{ id:'bH-C2', kind:'choice', stem:'It looks ___ if my boss will be in Germany ___ business next week so I’ll be ___ charge.',
+  blanks:[{ answers:['as'], options:['as','like'] },{ answers:['on'], options:['on','in'] },{ answers:['in'], options:['at','in'] }],
+  note:'as if / as though 引导从句；on business 出差；in charge 负责' },
+{ id:'bH-C3', kind:'choice', stem:'Is Mexico good ___ a holiday destination? ___ usual, I haven’t booked my holiday yet, but I think I’ll go to Spain ___ car.',
+  blanks:[{ answers:['as'], options:['like','as'] },{ answers:['As'], options:['Like','As'] },{ answers:['by'], options:['by','in'] }],
+  note:'as 表示「作为…身份／用途」；as usual 照例；交通方式用 by car' },
+{ id:'bH-C4', kind:'choice', stem:'You really sounded ___ though you were ___ love when I spoke to you ___ the phone last week. ___ you know, I think your new boyfriend is a really nice guy.',
+  blanks:[{ answers:['as'], options:['as','like'] },{ answers:['in'], options:['on','in'] },
+          { answers:['on'], options:['by','on'] },{ answers:['As'], options:['As','Like'] }],
+  note:'as though 引导从句；in love 恋爱中；on the phone 在电话上；As you know 正如你所知' },
+
+{ id:'bH-D', kind:'bank',
+  ctx:'导游在哈德良长城旁的罗马营地讲解。用方框里的词补全。',
+  bankWords:['reach','busy','interested','waiting','talk','sure','proud','depended','grateful','surprised','brilliant'],
+  stem:'Listen to me now, please. Can you hear me? I’m going to ___ to you today about daily life for Romans living in the camp. I think you will be ___ by some of the things that you see. This part of the camp was the kitchen. Imagine 15 cooks ___ with the meals for the soldiers and their families! The cooks ___ on local farms for the food, and they were ___ at keeping food for a long time, using salt for example. If you’re ___ in cooking, please ask for more information at the tourist centre. Shall we continue? Who are we ___ for? We’re not ___ about this part of the camp, but we think it was a bathing area, and we know that the Romans were ___ of their bathrooms. I expect that the people living here were ___ for hot water in winter. In a moment we’ll ___ the family part of the camp.',
+  blanks:[{ answers:['talk'] },{ answers:['surprised'] },{ answers:['busy'] },{ answers:['depended'] },
+          { answers:['brilliant'] },{ answers:['interested'] },{ answers:['waiting'] },{ answers:['sure'] },
+          { answers:['proud'] },{ answers:['grateful'] },{ answers:['reach'] }],
+  note:'形容词 + 介词的固定搭配：surprised by、busy with、brilliant at、interested in、sure about、proud of、grateful for' },
+
+{ id:'bH-E1', kind:'choice', ctx:'Olivia 和 Dan 在通电话。选出正确的介词。',
+  stem:'It’s on my desk, ___ the phone. Can you see it? That’s right. It’s ___ the dictionary.',
+  blanks:[{ answers:['behind'], options:['behind','between'] },{ answers:['under'], options:['across','under'] }],
+  note:'between 要有两个东西；under 在…下面' },
+{ id:'bH-E2', kind:'choice', stem:'After I’ve driven out ___ London, I go north ___ the A54, through Watford, ___ though I was going to Milton Keynes.',
+  blanks:[{ answers:['of'], options:['from','of'] },{ answers:['up'], options:['in','up'] },
+          { answers:['as'], options:['as','like'] }],
+  note:'out of 从…出来；up the A54 沿着公路往北；as though 好像' },
+{ id:'bH-E3', kind:'choice', stem:'But in fact I take the B254 ___ Halton before I reach Milton Keynes. That’s right, unless you get lost ___ me!',
+  blanks:[{ answers:['to'], options:['on','to'] },{ answers:['like'], options:['as','like'] }],
+  note:'to 表示去向；like me 像我一样' },
+{ id:'bH-E4', kind:'cloze', stem:'Dan: Isn’t there a big house ___ sale, just before the Halton road?\nOlivia: Yes. It’s ___ the left. I didn’t see it, so I had to ask ___ directions.',
+  blanks:[{ prompt:'介词', answers:['for'] },{ prompt:'介词', answers:['on'] },{ prompt:'介词', answers:['for'] }],
+  note:'for sale 待售；on the left 在左边；ask for 请求' },
+{ id:'bH-E5', kind:'cloze', stem:'Dan: I plan to arrive at the hotel ___ jeans instead ___ my suit and tie. By the way, did you apply ___ Phil’s job?',
+  blanks:[{ prompt:'介词', answers:['in'] },{ prompt:'介词', answers:['of'] },{ prompt:'介词', answers:['for'] }],
+  note:'穿着用 in；instead of 代替；apply for 申请' },
+{ id:'bH-E6', kind:'cloze', stem:'Olivia: I was a bit annoyed ___ the advertisement on the website. There was a sentence ___ the end of it, saying ‘You must be good ___ talking to people.’',
+  blanks:[{ prompt:'介词', answers:['with'] },{ prompt:'介词', answers:['at'] },{ prompt:'介词', answers:['at'] }],
+  note:'annoyed with 对…恼火；at the end of 在…末尾；good at 擅长' },
+{ id:'bH-E7', kind:'cloze', stem:'Olivia: Phil was very good at talking to people, but he wasn’t fond ___ doing any work, was he?\nDan: You sound ___ you didn’t really like Phil.\nOlivia: Well, I thought he was a bit cruel ___ his co-workers.\nDan: Yes, I think they were frightened ___ him, weren’t they?',
+  blanks:[{ prompt:'介词', answers:['of'] },{ prompt:'介词', answers:['like'] },
+          { prompt:'介词', answers:['to'] },{ prompt:'介词', answers:['of'] }],
+  note:'fond of 喜欢；sound like 听起来像；cruel to 对…残忍；frightened of 害怕' }
+
+  ]
+},
+  {
+    id: 'opg-basic-I',
+    level: 'Basic',
+    topic: '动词、被动语态、不定式与 -ing',
+    title: 'Basic 测试 I · 动词与被动语态',
+    source: 'Oxford Practice Grammar Basic · Test I',
+    items: [
+
+{ id:'bI-A1', kind:'fix', ctx:'Chris 和 Toby 在山里走迷路了。括号里的说法错了就点出来改掉，对的点「这句没错」。',
+  stem:'I’ve got a headache.', blanks:[{ target:null, answers:[] }], note:'have got 表示「有」，没错' },
+{ id:'bI-A2', kind:'fix', stem:'I’m making more and more tired.',
+  tokens:['I’m making','more','and','more','tired.'],
+  blanks:[{ target:'I’m making', answers:['I’m getting'] }], note:'get + 形容词表示「变得…」' },
+{ id:'bI-A3', kind:'fix', stem:'Try not to worry. I got some aspirin in my bag.',
+  tokens:['Try','not','to','worry.','I got','some','aspirin','in','my','bag.'],
+  blanks:[{ target:'I got', answers:['I’ve got','I have got'] }], note:'表示「现在有」用 have got' },
+{ id:'bI-A4', kind:'fix', stem:'It’s cold! Do you have an extra jumper?',
+  blanks:[{ target:null, answers:[] }], note:'Do you have…? 问「有没有」，没错' },
+{ id:'bI-A5', kind:'fix', stem:'I think we’ll have to stop for the night. It’s getting dark.',
+  blanks:[{ target:null, answers:[] }], note:'get + 形容词表示变化，没错' },
+{ id:'bI-A6', kind:'fix', stem:'What do you mean? We haven’t done a tent!',
+  tokens:['What','do','you','mean?','We haven’t done','a','tent!'],
+  blanks:[{ target:'We haven’t done', answers:['We haven’t made'] }], note:'do 和 make 的区别：这里原书给的答案是 made' },
+{ id:'bI-A7', kind:'fix', stem:'Try to stay calm. We’ll make a fire.',
+  blanks:[{ target:null, answers:[] }], note:'make a fire 是固定搭配，没错' },
+{ id:'bI-A8', kind:'fix', stem:'And we’ll have got a meal.',
+  tokens:['And','we’ll have got','a','meal.'],
+  blanks:[{ target:'we’ll have got', answers:['we’ll get'] }], note:'have got 只说现在拥有，不能用于将来' },
+{ id:'bI-A9', kind:'fix', stem:'I suppose you’re going to make the shopping!',
+  tokens:['I','suppose','you’re','going','to make','the','shopping!'],
+  blanks:[{ target:'to make', answers:['to do'] }], note:'do the shopping 是固定搭配' },
+{ id:'bI-A10', kind:'fix', stem:'We’re OK. I’ve got some tea and some pasta in my bag.',
+  blanks:[{ target:null, answers:[] }], note:'have got 表示「有」，没错' },
+{ id:'bI-A11', kind:'fix', stem:'I’ve got a job for you to make.',
+  tokens:['I’ve','got','a','job','for','you','to make.'],
+  blanks:[{ target:'to make.', answers:['to do'] }], note:'do a job 是固定搭配' },
+{ id:'bI-A12', kind:'fix', stem:'I want to have got a rest first!',
+  tokens:['I','want','to have got','a','rest','first!'],
+  blanks:[{ target:'to have got', answers:['to have'] }], note:'have a rest 是固定搭配，不能加 got' },
+{ id:'bI-A13', kind:'fix', stem:'Now you’re making me angry. Let’s get on with it!',
+  blanks:[{ target:null, answers:[] }], note:'make somebody + 形容词，没错' },
+
+{ id:'bI-B', kind:'bank',
+  ctx:'Christine 在跟医生说她丈夫的事。文章里每处都漏了一个词，用方框里的词补回去。',
+  bankWords:['it','it','it','put','ran','out','in','down'],
+  stem:'I’m worried about my husband. He gets up very late. He never wants to go ___. You can’t stay ___ all your life, can you, Doctor? If the TV is on when our friends come round, he doesn’t turn ___ off. Last Saturday we ___ out of milk. When we reached the supermarket, he said to me: ‘I don’t like your hat. Take ___ off! Put ___ away!’ That’s a strange thing to say, Doctor. I don’t think I can ___ up with the situation much longer. When I try to talk to him he just says: ‘Calm ___! I’m all right.’ What shall I do?',
+  blanks:[{ answers:['out'] },{ answers:['in'] },{ answers:['it'] },{ answers:['ran'] },
+          { answers:['it'] },{ answers:['it'] },{ answers:['put'] },{ answers:['down'] }],
+  note:'动词短语：go out、stay in、turn it off、run out of、take it off、put it away、put up with、calm down。代词要放在动词和副词中间' },
+
+{ id:'bI-C', kind:'cloze',
+  ctx:'把这段对话改得更自然：不知道是谁做的，就用被动语态。',
+  stem:'原句：Someone decorated our house last month.\n→ Our house ___\n\n原句：And someone is designing a summer house for the garden.\n→ And a summer house ___\n\n原句：But someone also stole our car last week.\n→ But our car ___\n\n原句：When they got there, someone hadn’t built their new house!\n→ When they got there, their new house ___\n\n原句：It was only after someone repaired the windows…\n→ It was only after their windows ___\n\n原句：…and someone mended the roof that they were happy.\n→ …and the roof ___\n\n原句：Well, someone has made our decision.\n→ Well, our decision ___\n\n原句：Someone booked our flight yesterday.\n→ Our flight ___\n\n原句：Someone is selling our house next month.\n→ Our house ___',
+  blanks:[
+    { prompt:'被动', answers:['was decorated last month'] },
+    { prompt:'被动', answers:['is being designed for the garden'] },
+    { prompt:'被动', answers:['was also stolen last week'] },
+    { prompt:'被动', answers:['hadn’t been built','had not been built'] },
+    { prompt:'被动', answers:['were repaired'] },
+    { prompt:'被动', answers:['was mended'] },
+    { prompt:'被动', answers:['has been made'] },
+    { prompt:'被动', answers:['was booked yesterday'] },
+    { prompt:'被动', answers:['is being sold next month'] }],
+  note:'被动语态 = be + 过去分词；时态由 be 来体现（was / is being / has been / had been）' },
+
+{ id:'bI-D', kind:'cloze',
+  ctx:'Maddie 在回复新朋友的消息。用括号里的动词：保持原形、加 to，或改成 -ing。',
+  stem:'It was nice to hear from you. To begin with, I don’t like cooking. And I hate ___ up. I can’t ___, but I’m planning ___ one day! I gave up ___ ten years ago. You don’t ___, do you? What else can I ___ you? Onions and old films make me ___. I go ___ on Sunday afternoons. And I don’t mind ___ in the rain. Some time ago I decided ___ fit. ___ regularly makes me ___ better, but I don’t like ___, and I love ___ chocolate! If you want me ___, you’ll have to write back!',
+  blanks:[
+    { prompt:'wash',     answers:['washing'] },
+    { prompt:'drive',    answers:['drive'] },
+    { prompt:'learn',    answers:['to learn'] },
+    { prompt:'smoke',    answers:['smoking'] },
+    { prompt:'smoke',    answers:['smoke'] },
+    { prompt:'tell',     answers:['tell'] },
+    { prompt:'cry',      answers:['cry'] },
+    { prompt:'dance',    answers:['dancing'] },
+    { prompt:'walk',     answers:['walking'] },
+    { prompt:'get',      answers:['to get'] },
+    { prompt:'Jog',      answers:['Jogging'] },
+    { prompt:'feel',     answers:['feel'] },
+    { prompt:'cycle',    answers:['cycling'] },
+    { prompt:'eat',      answers:['eating'] },
+    { prompt:'continue', answers:['to continue'] }],
+  note:'情态动词和 make / let 后面用原形；plan / decide / want 后面用 to do；like / hate / mind / give up / go 后面用 -ing' },
+
+{ id:'bI-E', kind:'cloze',
+  ctx:'Will 在跟老板谈话。把括号里的词改写出来 —— 需要就加 to，或者改成 -ing。',
+  stem:'Will: You promised to give me a new job after two years here.\nBoss: Yes, but you must ___ the job you’ve got.（finish / do）\nWill: But I would ___ something new now.（prefer / start）\nBoss: Try ___! What did you join the company for?（be / patient）\nWill: I wanted ___ interesting, I suppose.（do / something）\nBoss: And I allowed ___ lots of different things, didn’t I?（you / do）\nWill: And now you are asking ___ the same thing every day!（me / do）\nBoss: I’ve seen ___ so much! Just keep going a little longer.（you / improve）\nWill: You can’t make ___ in this job.（me / stay）\nBoss: No, I can’t. But I can encourage ___ about the future.（you / think）',
+  blanks:[
+    { prompt:'finish/do',    answers:['finish doing'] },
+    { prompt:'prefer/start', answers:['prefer to start'] },
+    { prompt:'be/patient',   answers:['to be patient','being patient'] },
+    { prompt:'do/something', answers:['to do something'] },
+    { prompt:'you/do',       answers:['you to do'] },
+    { prompt:'me/do',        answers:['me to do'] },
+    { prompt:'you/improve',  answers:['you improve'] },
+    { prompt:'me/stay',      answers:['me stay'] },
+    { prompt:'you/think',    answers:['you to think'] }],
+  note:'allow / ask / encourage + 宾语 + to do；make / see + 宾语 + 动词原形；finish 后面跟 -ing' }
+
+  ]
+},
+  {
+    id: 'opg-basic-J',
+    level: 'Basic',
+    topic: '条件句与间接引语',
+    title: 'Basic 测试 J · 条件句与间接引语',
+    source: 'Oxford Practice Grammar Basic · Test J',
+    items: [
+
+{ id:'bJ-A', kind:'cloze',
+  ctx:'Antonio 和 Ellie 在上班间隙聊天。用括号里动词的正确时态补全 —— 能用缩写就用缩写。',
+  stem:'Antonio: I feel old and useless.\nEllie: You’re OK. Don’t worry so much.\nAntonio: If I was in a different job, I might be happier.\nEllie: You always talk like this if you ___ tired.\nAntonio: Yes, but if I had applied for other jobs, I ___ something more interesting by now. I wouldn’t be so tired.\nEllie: If I ___ you, I’d take a holiday.\nAntonio: I wish I ___ enough money.\nEllie: If you saved up, you ___ be able to have holidays.\nAntonio: Yes, I know. But if I ___ to you, I won’t find an answer.\nEllie: I wish I ___ help you more.\nAntonio: But I would have stopped work completely if I ___ you, Ellie!\nEllie: If people ___ to each other, they lose hope. What makes you happy, anyway?\nAntonio: I wish I ___. The only thing I know is that I ___ if I’m happy.\nEllie: Perhaps you ___ happier if you got a job in music?',
+  blanks:[
+    { prompt:'be',        answers:['’re','are'] },
+    { prompt:'get',       answers:['would have got'] },
+    { prompt:'be',        answers:['were','was'] },
+    { prompt:'have',      answers:['had'] },
+    { prompt:'be',        answers:['would'] },
+    { prompt:'not talk',  answers:['don’t talk'] },
+    { prompt:'can',       answers:['could'] },
+    { prompt:'not meet',  answers:['hadn’t met','had not met'] },
+    { prompt:'not speak', answers:['don’t speak'] },
+    { prompt:'know',      answers:['knew'] },
+    { prompt:'sing',      answers:['sing'] },
+    { prompt:'be',        answers:['would be'] }],
+  note:'零条件/真实条件用现在时；虚拟现在用过去时（If I were you）；虚拟过去用 had done + would have done；I wish 后面退一个时态' },
+
+{ id:'bJ-B1', kind:'cloze', ctx:'Peter 在市中心做竞选演讲。把画线部分改成第二、第三类条件句，说得更有说服力。',
+  stem:'原句：You didn’t vote for me at the last election, so your lives have not improved.\n→ If you ___',
+  blanks:[{ prompt:'改写', answers:['had voted for me at the last election, your lives would have improved'] }],
+  note:'对过去的虚拟：If + had done, would have done' },
+{ id:'bJ-B2', kind:'cloze', stem:'原句：Churchill isn’t alive today.\n→ I wish Churchill ___',
+  blanks:[{ prompt:'改写', answers:['was alive today','were alive today'] }], note:'I wish + 过去时，表示对现在的遗憾' },
+{ id:'bJ-B3', kind:'cloze', stem:'原句：Life isn’t better, and he isn’t our Prime Minister.\n→ Life would ___',
+  blanks:[{ prompt:'改写', answers:['be better if he was our Prime Minister','be better if he were our Prime Minister'] }],
+  note:'对现在的虚拟：would + 动词原形 + if + 过去时' },
+{ id:'bJ-B4', kind:'cloze', stem:'原句：Our teachers aren’t happy because our schools are short of money.\n→ Our teachers would ___',
+  blanks:[{ prompt:'改写', answers:['be happy if our schools had more money'] }], note:'对现在的虚拟' },
+{ id:'bJ-B5', kind:'cloze', stem:'原句：I won’t become Prime Minister, so I won’t give every child a new phone.\n→ If I ___',
+  blanks:[{ prompt:'改写', answers:['became Prime Minister I would give every child a new phone','became Prime Minister, I would give every child a new phone'] }],
+  note:'对将来可能性很低的事，用第二类条件句' },
+{ id:'bJ-B6', kind:'cloze', stem:'原句：I didn’t bring my wife with me today.\n→ I wish I ___',
+  blanks:[{ prompt:'改写', answers:['had brought my wife with me today'] }], note:'I wish + had done，表示对过去的遗憾' },
+{ id:'bJ-B7', kind:'cloze', stem:'原句：She isn’t here because she’s busy with her own work.\n→ If she wasn’t ___',
+  blanks:[{ prompt:'改写', answers:['busy with her own work, she would be here'] }], note:'对现在的虚拟' },
+
+{ id:'bJ-C', kind:'cloze',
+  ctx:'Luke 在向女友转述父亲说的话。用括号里的动词改成间接引语。',
+  stem:'父亲原话：‘Please get enough sleep.’\n→ (advise) ___\n\n父亲原话：‘You should get some qualifications.’\n→ (tell) ___\n\n父亲原话：‘Don’t take any drugs.’\n→ (warn) ___\n\n父亲原话：‘Why did Paul leave the flat?’\n→ (ask) ___\n\n父亲原话：‘Where do you work?’\n→ (ask) ___\n\n父亲原话：‘Please give me your new address there.’\n→ (persuade) ___',
+  blanks:[
+    { prompt:'advise',   answers:['He advised me to get enough sleep'] },
+    { prompt:'tell',     answers:['He told me to get some qualifications'] },
+    { prompt:'warn',     answers:['He warned me not to take drugs','He warned me not to take any drugs'] },
+    { prompt:'ask',      answers:['He asked why he left the flat','He asked why Paul had left the flat','He asked why Paul left the flat'] },
+    { prompt:'ask',      answers:['He asked me where I worked','He asked me where I work'] },
+    { prompt:'persuade', answers:['he persuaded me to give him my address in Sheffield','he persuaded me to give him my new address there'] }],
+  note:'advise / tell / warn / persuade + 宾语 + (not) to do；转述疑问句用陈述语序，不要助动词' },
+
+{ id:'bJ-D', kind:'cloze',
+  ctx:'反过来：根据 William 向妻子的转述，还原 Luke 当时说的原话。',
+  stem:'转述：He said he would give me the name of his doctor.\n→ Luke: ___\n\n转述：He told me to eat more fruit.\n→ Luke: ___\n\n转述：He told me he was living in a flat on his own.\n→ Luke: ___\n\n转述：He said he had tried sharing with his friend, Paul, but Paul had left.\n→ Luke: ___\n\n转述：He said he was going to live in Sheffield.\n→ Luke: ___',
+  blanks:[
+    { prompt:'原话', answers:['I’ll give you the name of my doctor'] },
+    { prompt:'原话', answers:['You should eat more fruit'] },
+    { prompt:'原话', answers:['I’m living in a flat on my own'] },
+    { prompt:'原话', answers:['I tried sharing with Paul, but he left','I tried sharing with my friend Paul, but he left'] },
+    { prompt:'原话', answers:['I’m going to live in Sheffield','I’m going to go and live in Sheffield'] }],
+  note:'还原原话要把时态往回推一格：would → will，had done → did，was doing → am doing' }
+
+  ]
+},
+  {
     id: 'demo-present',
     level: '基础',
     topic: '现在时',
@@ -5569,6 +6390,11 @@ function renderGramRun(){
   const isFix   = it.kind === 'fix' || isStrike;
   const isOrder = it.kind === 'order' && it.hintWords && it.hintWords.length;
   const isBank  = it.kind === 'bank' && it.bankWords && it.bankWords.length;
+  let strikeToks = [];
+  /* toks 里混着空白串（为了保留原来的间距），所以下标不等于「第几个词」。
+     题库里写的 targetTok 是「第几个词」，这里换算成 toks 的真实下标。 */
+  let strikeWordIdx = [];
+  const tokOf = n => (n == null ? null : strikeWordIdx[n]);
   const wholeLine = !isFix && !isOrder && !isBank && (parts.length === 1 || parts.join('').trim() === '');
   let sentence = '';
   if(isFix){
@@ -5577,6 +6403,8 @@ function renderGramRun(){
     const toks = (it.tokens && it.tokens.length)
       ? it.tokens
       : String(it.stem).split(/(\s+)/).filter(x=>x !== '');
+    strikeToks = toks;
+    strikeWordIdx = toks.map((t, i)=>t.trim() ? i : -1).filter(i=>i >= 0);
     sentence = toks.map((tok, ti)=>{
       if(!tok.trim()) return esc(tok);
       return `<button type="button" class="gram-tok" data-tok="${ti}" data-word="${esc(tok)}">${esc(tok)}</button>`;
@@ -5715,13 +6543,17 @@ function renderGramRun(){
           : (g.fixWord || (g.fixNoErr ? '这句没错' : '(没选词)'));
         ff.classList.add('gram-fix-set');
       }
-      const targets = blanks.map(x=>gramNorm(gramStripEnds(x.target || ''))).filter(Boolean);
+      const targetIdx = blanks.map(x=>tokOf(x.targetTok)).filter(x=>x != null);
+      const targets = blanks.filter(x=>x.targetTok == null)
+                            .map(x=>gramNorm(gramStripEnds(x.target || ''))).filter(Boolean);
       wrap.querySelectorAll('.gram-tok').forEach(btn=>{
+        const ti = +btn.dataset.tok;
         btn.disabled = true;
         if(isStrike){
-          if(g.strikePick.indexOf(btn.dataset.word) >= 0) btn.classList.add('gram-tok-struck');
+          if(g.strikePick.indexOf(ti) >= 0) btn.classList.add('gram-tok-struck');
         } else if(g.fixWord && btn.dataset.word === g.fixWord) btn.classList.add('gram-tok-on');
-        if(targets.indexOf(gramNorm(gramStripEnds(btn.dataset.word))) >= 0) btn.classList.add('gram-tok-right');
+        if(targetIdx.indexOf(ti) >= 0
+           || targets.indexOf(gramNorm(gramStripEnds(btn.dataset.word))) >= 0) btn.classList.add('gram-tok-right');
       });
     }
     // 选项按钮停用，并把正确的那个标绿
@@ -5768,17 +6600,19 @@ function renderGramRun(){
            一句里可能要划掉好几个词 —— 按集合比对，点的顺序不算数。
            最多只能点 target 那么多个（多了要先取消），所以不存在
            「全点一遍就满分」。 */
-        const picked = g.strikePick.map(w=>gramNorm(gramStripEnds(w)));
+        const pickedWords = g.strikePick.map(i=>gramNorm(gramStripEnds(strikeToks[i] || '')));
         perBlank = blanks.map(bb=>{
+          // 指定了下标就按下标判：同一句里 will 出现两次时，点错那个不能算对
+          if(bb.targetTok != null) return g.strikePick.indexOf(tokOf(bb.targetTok)) >= 0;
           const t = gramNorm(gramStripEnds(bb.target || ''));
-          return !!t && picked.indexOf(t) >= 0;
+          return !!t && pickedWords.indexOf(t) >= 0;
         });
       } else {
         perBlank = [hitWord && gramBlankOk(corr, b.answers)];
       }
       if(isStrike){
         vals[0] = g.fixNoErr && !g.strikePick.length ? '这句没错'
-                : g.strikePick.length ? '划掉 ' + g.strikePick.join('、') : '(没选词)';
+                : g.strikePick.length ? '划掉 ' + g.strikePick.map(i=>strikeToks[i]).join('、') : '(没选词)';
       } else {
         vals[0] = g.fixNoErr && !g.fixWord ? '这句没错'
                 : !g.fixWord ? '(没选词)'
@@ -5796,7 +6630,7 @@ function renderGramRun(){
         ? [ (blanks[0] && blanks[0].target == null)
               ? '这句没错'
               : isStrike
-                ? '划掉 ' + blanks.map(b=>b.target).filter(Boolean).join('、')
+                ? '划掉 ' + blanks.map(b=>b.targetTok != null ? strikeToks[tokOf(b.targetTok)] : b.target).filter(Boolean).join('、')
                 : blanks[0].target + ' → ' + ((blanks[0].answers || [])[0] || '') ]
         : blanks.map(b=>(b.answers || [])[0] || ''),
       perBlank,
@@ -5833,11 +6667,11 @@ function renderGramRun(){
   const strikeMax = blanks.length;
   const paintStrike = ()=>{
     wrap.querySelectorAll('.gram-tok').forEach(b=>{
-      b.classList.toggle('gram-tok-struck', g.strikePick.indexOf(b.dataset.word) >= 0);
+      b.classList.toggle('gram-tok-struck', g.strikePick.indexOf(+b.dataset.tok) >= 0);
     });
     if(fixFrom){
       fixFrom.textContent = g.strikePick.length
-        ? '划掉：' + g.strikePick.join('、')
+        ? '划掉：' + g.strikePick.map(i=>strikeToks[i]).join('、')
         : (strikeMax > 1 ? `点句子里多余的词（${strikeMax} 个）` : '点句子里多余的那个词');
       fixFrom.classList.toggle('gram-fix-set', !!g.strikePick.length);
     }
@@ -5847,11 +6681,11 @@ function renderGramRun(){
     wrap.querySelectorAll('.gram-tok').forEach(btn=>{
       btn.onclick = ()=>{
         if(g.checked) return;
-        const w = btn.dataset.word;
-        const at = g.strikePick.indexOf(w);
+        const ti = +btn.dataset.tok;
+        const at = g.strikePick.indexOf(ti);
         if(at >= 0) g.strikePick.splice(at, 1);
         // 最多只能点 target 那么多个，想换要先取消 —— 否则全点一遍就满分
-        else if(g.strikePick.length < strikeMax) g.strikePick.push(w);
+        else if(g.strikePick.length < strikeMax) g.strikePick.push(ti);
         else return;
         g.fixNoErr = false;
         paintStrike();
