@@ -561,6 +561,16 @@
   input[type=text].gram-in-fix:disabled{ background:#F2F2F0; color:var(--ink-soft); border-style:dashed; }
 
   /* 连词成句：词卡 + 句子托盘 */
+  .gram-set-list{ display:flex; flex-direction:column; gap:12px; }
+  .gram-set{ display:flex; align-items:center; gap:14px; }
+  .gram-set-main{ flex:1; min-width:0; }
+  .gram-set-meta{ font-size:12.5px; color:var(--ink-soft); }
+  .gram-set-src{ font-style:italic; }
+  .gram-set-last{ font-size:12.5px; color:var(--teal); font-weight:600; margin-top:4px; }
+  .nav-switch{ font-weight:700; }
+  @media (max-width:560px){
+    .gram-set{ flex-direction:column; align-items:stretch; }
+  }
   .gram-corr{ color:var(--teal); font-weight:700; font-size:14px; margin:0 6px 0 3px; white-space:nowrap; }
   .gram-tok-struck{ text-decoration:line-through; text-decoration-thickness:2px; color:var(--ink-soft); background:var(--paper-2,#F7F4EE); }
   .gram-slot-bank{ cursor:pointer; min-width:84px; }
@@ -810,6 +820,13 @@
     .card{ padding:22px 18px; border-radius:15px; }
     .hero h1{ font-size:31px; }
     .hide-sm{ display:none; }
+    /* 顶栏多了一个切换按钮，手机上要给它让地方：
+       副标题收起来，品牌名可以压缩，切换按钮不许被挤变形。 */
+    /* 访客状态下顶栏已经有「访客模式 / 保存进度 / 退出」三样，
+       再加切换按钮就挤出横向滚动条了 —— 窄屏只留品牌图标。 */
+    .brand-text{ display:none; }
+    .topbar .nav-switch{ flex:none; white-space:nowrap; padding-left:10px; padding-right:10px; }
+    .user-chip{ gap:7px; flex:none; }
     .flip-stage{ height:290px; }
     .face-front .the-word{ font-size:37px; }
     .dict-input{ font-size:21px; }
@@ -2785,7 +2802,7 @@ function toast(msg){
    渲染入口
    ========================================================= */
 const STUDENT_SCREENS = ['welcome','levelPick','vtLevel','vocabTest','vocabTestResult','adaptive','placementResult','dashboard',
-                         'session','quiz','complete','notebook','dictSetup','dictRun','dictResult','importBook','gramRun','gramResult'];
+                         'session','quiz','complete','notebook','dictSetup','dictRun','dictResult','importBook','gramHome','gramRun','gramResult'];
 function render(){
   const app = document.getElementById('app');
   app.innerHTML = '';
@@ -2811,6 +2828,7 @@ function render(){
     case 'dictRun':        el = renderDictRun(); break;
     case 'dictResult':     el = renderDictResult(); break;
     case 'importBook':     el = renderImportBook(); break;
+    case 'gramHome':       el = renderGramHome(); break;
     case 'gramRun':        el = renderGramRun(); break;
     case 'gramResult':     el = renderGramResult(); break;
     case 'hwIntro':        el = renderHwIntro(); break;
@@ -2855,18 +2873,21 @@ function renderTopbar(){
       </div>
     </div>
     <div class="user-chip">
+      ${(p && p.sid) ? `<button class="btn-ghost nav-switch" id="modeSwitch">${inGrammar() ? '📘 词汇' : '📝 语法'}</button>` : ''}
       ${p && p.isGuest
-        ? `<span class="guest-tag">访客模式</span>${ACCOUNTS_ENABLED
-             ? '<button class="btn-ghost btn-save-hl" id="saveProgressBtn">保存进度</button>' : ''}`
+        ? `<span class="guest-tag">访客</span>`
         : `<span class="hide-sm">你好，<b>${esc(p ? p.username : '')}</b></span>`}
       <button class="btn-ghost" id="logoutBtn">${p && p.isGuest ? '退出' : '退出'}</button>
     </div>`;
   bar.querySelector('#homeBrand').onclick = ()=>{
-    if(state.profile && state.profile.sid){ TTS.stop(); state.screen = 'dashboard'; render(); }
+    if(state.profile && state.profile.sid){ TTS.stop(); state.screen = inGrammar() ? 'gramHome' : 'dashboard'; render(); }
   };
-  const sp = bar.querySelector('#saveProgressBtn');
-  if(sp) sp.onclick = ()=>{ state.authMode = 'register'; state.fromGuest = true; state.screen = 'auth'; render(); };
-
+  const ms = bar.querySelector('#modeSwitch');
+  if(ms) ms.onclick = ()=>{
+    TTS.stop();
+    state.screen = inGrammar() ? 'dashboard' : 'gramHome';
+    render();
+  };
   bar.querySelector('#logoutBtn').onclick = async ()=>{
     TTS.stop();
     if(state.profile && state.profile.isGuest){
@@ -5253,6 +5274,124 @@ const GRAM_KINDS = {
    真正的题库在下一阶段导入，格式和这里完全一样。 */
 const GRAM_BANK = [
   {
+    id: 'opg-basic-A',
+    level: 'Basic',
+    topic: '现在时',
+    title: 'Basic 测试 A · 现在时',
+    source: 'Oxford Practice Grammar Basic · Test A',
+    items: [
+
+{ id:'bA-A', kind:'cloze',
+  ctx:'Kate 和 Amber 在聊各自的日常。用括号里的动词的一般现在时补全对话，能用缩写就用缩写。',
+  stem:'Kate: Do you get up early?\nAmber: No, not really. ___ to the bathroom first at about eight o’clock. ___ until about eight thirty. What about you?\nKate: Well, ___ to get me up at about seven, but ___!\nAmber: ___ very hungry in the morning. What about you? ___ much for breakfast?\nKate: ___ to eat much, but ___ for an hour before breakfast, so ___ quite a lot.\nAmber: ___ a big lunch as well?\nKate: ___. ___ me!\nAmber: ___ to work?\nKate: Yes. ___ any buses. What about you?\nAmber: Well, ___ to buy a new car, but at the moment, ___.',
+  blanks:[
+    { prompt:'My sister/go',        answers:['My sister goes'] },
+    { prompt:'not/get up',          answers:['I don’t get up'] },
+    { prompt:'Mike/try',            answers:['Mike tries'] },
+    { prompt:'he/not/usually/succeed', answers:['he doesn’t usually succeed'] },
+    { prompt:'I/be/not',            answers:['I’m not'] },
+    { prompt:'you/eat',             answers:['Do you eat'] },
+    { prompt:'I/not/usually/like',  answers:['I don’t usually like'] },
+    { prompt:'Mike/study',          answers:['Mike studies'] },
+    { prompt:'he/eat',              answers:['he eats'] },
+    { prompt:'he/have',             answers:['Does he have'] },
+    { prompt:'I/not/know',          answers:['I don’t know'] },
+    { prompt:'He/not/tell',         answers:['He doesn’t tell'] },
+    { prompt:'you/drive',           answers:['Do you drive'] },
+    { prompt:'there/not/be',        answers:['There aren’t'] },
+    { prompt:'my sister/want',      answers:['my sister wants'] },
+    { prompt:'we/both/walk',        answers:['we both walk'] }],
+  note:'一般现在时：第三人称单数加 -s，否定用 don’t / doesn’t，疑问用 Do / Does 开头' },
+
+{ id:'bA-B1', kind:'fix', ctx:'Felix 在葡萄牙度假，给儿子写邮件。现在进行时写对了就点「这句没错」；写错了就点那个词，改成正确的形式。',
+  stem:'I’m siting in the hotel Business Centre.',
+  blanks:[{ target:'siting', answers:['sitting'] }], note:'短元音 + 单辅音结尾，-ing 前要双写辅音' },
+{ id:'bA-B2', kind:'fix', stem:'Tom is swiming in the pool.',
+  blanks:[{ target:'swiming', answers:['swimming'] }], note:'swim → swimming，双写 m' },
+{ id:'bA-B3', kind:'fix', stem:'Ellie is lying on the beach.',
+  blanks:[{ target:null, answers:[] }], note:'lie → lying，这个写法本来就对' },
+{ id:'bA-B4', kind:'fix', stem:'Charlotte is shoping.',
+  blanks:[{ target:'shoping', answers:['shopping'] }], note:'shop → shopping，双写 p' },
+{ id:'bA-B5', kind:'fix', stem:'We’re liking Portugal.', tokens:['We’re liking','Portugal.'],
+  blanks:[{ target:'We’re liking', answers:['We like'] }], note:'like 是状态动词，不用进行时' },
+{ id:'bA-B6', kind:'fix', stem:'We’re all relaxing.',
+  blanks:[{ target:null, answers:[] }], note:'正在发生的动作，用现在进行时没问题' },
+{ id:'bA-B7', kind:'fix', stem:'Are you working hard at the moment?',
+  blanks:[{ target:null, answers:[] }], note:'at the moment 正好配现在进行时' },
+{ id:'bA-B8', kind:'fix', stem:'I’m knowing your exams start tomorrow.', tokens:['I’m knowing','your','exams','start','tomorrow.'],
+  blanks:[{ target:'I’m knowing', answers:['I know'] }], note:'know 是状态动词，不用进行时' },
+{ id:'bA-B9', kind:'fix', stem:'Is it raining in England?',
+  blanks:[{ target:null, answers:[] }], note:'问此刻的天气，现在进行时' },
+{ id:'bA-B10', kind:'fix', stem:'The sun is shineing here, of course!',
+  blanks:[{ target:'shineing', answers:['shining'] }], note:'shine 以 e 结尾，-ing 前去掉 e' },
+{ id:'bA-B11', kind:'fix', stem:'I’m learning a bit of Portuguese.',
+  blanks:[{ target:null, answers:[] }], note:'这段时间一直在学，现在进行时' },
+{ id:'bA-B12', kind:'fix', stem:'I’m understanding some of the things that people say.',
+  tokens:['I’m understanding','some','of','the','things','that','people','say.'],
+  blanks:[{ target:'I’m understanding', answers:['I understand'] }], note:'understand 是状态动词，不用进行时' },
+
+{ id:'bA-C', kind:'cloze',
+  ctx:'Hazel 和 Isaac 在通电话。用括号里的动词的一般现在时或现在进行时补全对话，能用缩写就用缩写。',
+  stem:'Isaac: Are you working?\nHazel: Yes. ___ a piece of homework for tomorrow. Why? What are you doing?\nIsaac: Well, ___ about my homework, but I’m afraid ___ it at the moment. I’m tired and bored. ___ to go out?\nHazel: No. Look at the weather. ___. ___ in the rain. By the way, ___ the new girl in our class, the one with glasses? ___ ___ from Venezuela. Anyway, ___ with Peter’s family this month.\nIsaac: Yes, I know. ___ at school, isn’t she? Peter says ___ three languages: Spanish, English and French. ___ other than English!',
+  blanks:[
+    { prompt:'I/finish',            answers:['I’m finishing'] },
+    { prompt:'I/think',             answers:['I’m thinking'] },
+    { prompt:'I/not/actually/do',   answers:['I’m not actually doing'] },
+    { prompt:'you/want',            answers:['Do you want'] },
+    { prompt:'it/rain',             answers:['It’s raining'] },
+    { prompt:'I/never/go out',      answers:['I never go out'] },
+    { prompt:'you/know',            answers:['you know'] },
+    { prompt:'I/think',             answers:['I think'] },
+    { prompt:'she/come',            answers:['she comes'] },
+    { prompt:'she/stay',            answers:['she’s staying'] },
+    { prompt:'she/do/well',         answers:['She’s doing well'] },
+    { prompt:'she/speak',           answers:['she speaks'] },
+    { prompt:'I/not/speak/any languages', answers:['I don’t speak any languages'] }],
+  note:'一般现在时讲习惯和状态，现在进行时讲此刻或这阵子正在发生的事' },
+
+{ id:'bA-D1', kind:'strike',
+  ctx:'这是一本书的开头，每处都多了一个不该出现的词。把多余的点掉。（第一处已经替你划掉了）',
+  stem:'The sun is shining and the birds sing are singing.',
+  blanks:[{ target:'sing' }], note:'此刻正在发生 → 现在进行时' },
+{ id:'bA-D2', kind:'strike', stem:'What is does everyone doing do?',
+  blanks:[{ target:'is' },{ target:'doing' }], note:'一般现在时的疑问句：does + 动词原形' },
+{ id:'bA-D3', kind:'strike', stem:'Well, Mrs Green is reads reading a newspaper.',
+  blanks:[{ target:'reads' }], note:'此刻正在读 → 现在进行时' },
+{ id:'bA-D4', kind:'strike', stem:'She is reads reading a newspaper every day before breakfast.',
+  blanks:[{ target:'is' },{ target:'reading' }], note:'every day 是习惯 → 一般现在时' },
+{ id:'bA-D5', kind:'strike', stem:'Her husband, Mr Green, is danceing dancing in the garden.',
+  blanks:[{ target:'danceing' }], note:'dance 以 e 结尾，-ing 前去掉 e' },
+{ id:'bA-D6', kind:'strike', stem:'He likes is liking dancing in the morning.',
+  blanks:[{ target:'is' },{ target:'liking' }], note:'like 是状态动词，不用进行时' },
+{ id:'bA-D7', kind:'strike', stem:'‘Have you another cup of coffee, darling,’ says Mr Green.',
+  blanks:[{ target:'you' }], note:'祈使句不要主语' },
+{ id:'bA-D8', kind:'strike', stem:'‘But I’m still drink drinking my first cup, dear,’ replies Mrs Green.',
+  blanks:[{ target:'drink' }], note:'still + 现在进行时' },
+{ id:'bA-D9', kind:'strike', stem:'She is usually bringing brings me my coffee.',
+  blanks:[{ target:'is' },{ target:'bringing' }], note:'usually 是习惯 → 一般现在时' },
+{ id:'bA-D10', kind:'strike', stem:'But he doesn’t stop dance dancing.',
+  blanks:[{ target:'dance' }], note:'stop 后面跟 -ing' },
+{ id:'bA-D11', kind:'strike', stem:'She’s she works working in London this week.',
+  blanks:[{ target:'she' },{ target:'works' }], note:'this week 这阵子 → 现在进行时' },
+{ id:'bA-D12', kind:'strike', stem:'‘Stopping Stop dancing and listening listen to me.’',
+  blanks:[{ target:'Stopping' },{ target:'listening' }], note:'祈使句用动词原形' },
+{ id:'bA-D13', kind:'strike', stem:'I never forget forgetting anything.',
+  blanks:[{ target:'forgetting' }], note:'never 是习惯 → 一般现在时' },
+{ id:'bA-D14', kind:'strike', stem:'All right, darling, but don’t forget not your briefcase.',
+  blanks:[{ target:'not' }], note:'don’t 已经是否定，不要再加 not' },
+{ id:'bA-D15', kind:'strike', stem:'Don’t dancing dance too hard!',
+  blanks:[{ target:'dancing' }], note:'don’t 后面用动词原形' },
+
+{ id:'bA-E', kind:'bank',
+  ctx:'新学期开学了，给新生的几条提示。用方框里的词补全句子。',
+  bankWords:['Check','Don’t give','Show','Don’t smoke','Don’t copy'],
+  stem:'___ that you know all the examination dates.\n___ your computer password to another student.\n___ your ID card when you enter the building.\n___ in the lecture halls or classrooms.\n___ your essays from the Internet!',
+  blanks:[{ answers:['Check'] },{ answers:['Don’t give'] },{ answers:['Show'] },{ answers:['Don’t smoke'] },{ answers:['Don’t copy'] }],
+  note:'祈使句：肯定用动词原形，否定用 Don’t + 动词原形' }
+
+  ]
+  },
+  {
     id: 'demo-present',
     level: '基础',
     topic: '现在时',
@@ -5306,7 +5445,7 @@ const GRAM_BANK = [
 function gramSet(gid){ return GRAM_BANK.find(g=>g.id === gid) || GRAM_BANK[0]; }
 
 /* ---------- 学生端：答题 ---------- */
-function startGrammar(a){
+function startGrammar(a, solo){
   const p = state.profile;
   const name = (p && !p.isGuest) ? p.username : (state.hwName || '').trim();
   state.gram = {
@@ -5317,10 +5456,77 @@ function startGrammar(a){
     lastOk: null,
     startedAt: Date.now(),
     label: a.title || a.code,
-    hw: { code: a.code, title: a.title, name }
+    // 自己练着玩的不算作业，不往 submissions 里写
+    hw: solo ? null : { code: a.code, title: a.title, name },
+    solo: !!solo
   };
   state.screen = 'gramRun';
   render();
+}
+
+/* 语法模块的首页。顶栏那个按钮在「📝 语法 / 📘 词汇」之间切，
+   两边各有自己的主页，来回一键。作业链接进来的不算在里面 ——
+   那是老师布置的，有自己的入口和提交流程。 */
+function inGrammar(){
+  return state.screen === 'gramHome'
+      || ((state.screen === 'gramRun' || state.screen === 'gramResult') && state.gram && state.gram.solo)
+      || (state.screen === 'gramResult' && state.gramResult && !state.gramResult.hw);
+}
+
+function gramSetStats(set){
+  const items = set.items || [];
+  return { n: items.length, blanks: items.reduce((t, it)=>t + Math.max(1, (it.blanks || []).length), 0) };
+}
+
+function renderGramHome(){
+  const p = state.profile;
+  const hist = (p && p.gramHistory || []).slice().reverse();
+  const best = {};
+  hist.forEach(h=>{ if(!best[h.label]) best[h.label] = h; });   // 每套只留最近一次
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="session-head">
+      <div>
+        <h2 style="margin:0;">📝 语法练习</h2>
+        <div style="font-size:12.5px; color:var(--ink-soft);">选一套开始；做完立刻看到对错和讲解</div>
+      </div>
+      <button class="btn-ghost" id="toVocab">📘 回词汇</button>
+    </div>
+
+    ${hist.length ? `
+      <div class="stat-row">
+        <div class="stat"><div class="num">${hist.length}</div><div class="lbl">练过的次数</div></div>
+        <div class="stat"><div class="num">${pct(hist.reduce((a,h)=>a+h.correct,0), hist.reduce((a,h)=>a+h.total,0))}%</div><div class="lbl">总正确率</div></div>
+      </div>` : ''}
+
+    <div class="gram-set-list">
+      ${GRAM_BANK.map(set=>{
+        const st = gramSetStats(set);
+        const last = best[set.title];
+        return `
+          <div class="card gram-set">
+            <div class="gram-set-main">
+              <div class="level-pill">${esc(set.level || '练习')} · ${esc(set.topic || '')}</div>
+              <h3 style="margin:8px 0 4px;">${esc(set.title)}</h3>
+              <div class="gram-set-meta">${st.n} 题 · 满分 ${st.blanks}${
+                set.source ? ` · <span class="gram-set-src">${esc(set.source)}</span>` : ''}</div>
+              ${last ? `<div class="gram-set-last">上次：${last.correct} / ${last.total}（${pct(last.correct, last.total)}%）· ${esc(last.date)}</div>` : ''}
+            </div>
+            <button class="btn btn-orange" data-set="${esc(set.id)}">${last ? '再练一次' : '开始'} →</button>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  wrap.querySelector('#toVocab').onclick = ()=>{ state.screen = 'dashboard'; render(); };
+  wrap.querySelectorAll('[data-set]').forEach(b=>{
+    b.onclick = ()=>{
+      const set = GRAM_BANK.find(x=>x.id === b.dataset.set);
+      if(!set) return;
+      startGrammar({ code: 'solo-' + set.id, title: set.title, items: set.items }, true);
+    };
+  });
+  return wrap;
 }
 
 function renderGramRun(){
@@ -5348,10 +5554,15 @@ function renderGramRun(){
   const wholeLine = !isFix && !isOrder && !isBank && (parts.length === 1 || parts.join('').trim() === '');
   let sentence = '';
   if(isFix){
-    sentence = String(it.stem).split(/(\s+)/).map((tok, ti)=>{
+    /* 默认按空格切词。但要改的有时是一个词组 —— We’re liking → We like，
+       点一个词没法表达。这种题在 it.tokens 里直接给出可点的块。 */
+    const toks = (it.tokens && it.tokens.length)
+      ? it.tokens
+      : String(it.stem).split(/(\s+)/).filter(x=>x !== '');
+    sentence = toks.map((tok, ti)=>{
       if(!tok.trim()) return esc(tok);
       return `<button type="button" class="gram-tok" data-tok="${ti}" data-word="${esc(tok)}">${esc(tok)}</button>`;
-    }).join('');
+    }).join(it.tokens && it.tokens.length ? ' ' : '');
   }
   else if(isOrder){
     sentence = `<div class="gram-tray" id="gTray"><span class="gram-tray-ph">点上面的词，按顺序排进来</span></div>`
@@ -5481,13 +5692,18 @@ function renderGramRun(){
       const b = blanks[0] || {};
       const ff = wrap.querySelector('#gFixFrom');
       if(ff){
-        ff.textContent = (g.fixWord ? (isStrike ? '划掉：' + g.fixWord : g.fixWord) : (g.fixNoErr ? '这句没错' : '(没选词)'));
+        ff.textContent = isStrike
+          ? (g.strikePick.length ? '划掉：' + g.strikePick.join('、') : (g.fixNoErr ? '这句没错' : '(没选词)'))
+          : (g.fixWord || (g.fixNoErr ? '这句没错' : '(没选词)'));
         ff.classList.add('gram-fix-set');
       }
+      const targets = blanks.map(x=>gramNorm(gramStripEnds(x.target || ''))).filter(Boolean);
       wrap.querySelectorAll('.gram-tok').forEach(btn=>{
         btn.disabled = true;
-        if(g.fixWord && btn.dataset.word === g.fixWord) btn.classList.add(isStrike ? 'gram-tok-struck' : 'gram-tok-on');
-        if(b.target && gramNorm(gramStripEnds(btn.dataset.word)) === gramNorm(gramStripEnds(b.target))) btn.classList.add('gram-tok-right');
+        if(isStrike){
+          if(g.strikePick.indexOf(btn.dataset.word) >= 0) btn.classList.add('gram-tok-struck');
+        } else if(g.fixWord && btn.dataset.word === g.fixWord) btn.classList.add('gram-tok-on');
+        if(targets.indexOf(gramNorm(gramStripEnds(btn.dataset.word))) >= 0) btn.classList.add('gram-tok-right');
       });
     }
     // 选项按钮停用，并把正确的那个标绿
@@ -5511,6 +5727,7 @@ function renderGramRun(){
   /* 改错题的作答状态：选中了哪个词，改成什么。
      判对要两个条件同时满足 —— 找对词，并且改对。
      只指对地方、改错了不算会。 */
+  if(!g.strikePick) g.strikePick = [];
   if(g.fixWord === undefined) g.fixWord = null;
   if(g.fixCorr === undefined) g.fixCorr = '';
   if(g.fixNoErr === undefined) g.fixNoErr = false;
@@ -5523,19 +5740,32 @@ function renderGramRun(){
       const corr = vals[0] || '';
       g.fixCorr = corr;
       const hitWord = !!g.fixWord && gramNorm(gramStripEnds(g.fixWord)) === gramNorm(gramStripEnds(b.target || ''));
-      if(b.target == null){
+      if(isStrike && b.target == null){
+        perBlank = [g.fixNoErr && !g.strikePick.length];
+      } else if(b.target == null){
         // 本来就对的句子：只有按了「这句没错」才算对
         perBlank = [g.fixNoErr && !g.fixWord];
       } else if(isStrike){
-        // 划掉题只看点对没点对，没有「改成什么」这一步
-        perBlank = [hitWord];
+        /* 划掉题只看点对没点对，没有「改成什么」这一步。
+           一句里可能要划掉好几个词 —— 按集合比对，点的顺序不算数。
+           最多只能点 target 那么多个（多了要先取消），所以不存在
+           「全点一遍就满分」。 */
+        const picked = g.strikePick.map(w=>gramNorm(gramStripEnds(w)));
+        perBlank = blanks.map(bb=>{
+          const t = gramNorm(gramStripEnds(bb.target || ''));
+          return !!t && picked.indexOf(t) >= 0;
+        });
       } else {
         perBlank = [hitWord && gramBlankOk(corr, b.answers)];
       }
-      vals[0] = g.fixNoErr && !g.fixWord ? '这句没错'
-              : !g.fixWord ? '(没选词)'
-              : isStrike ? '划掉 ' + g.fixWord
-              : g.fixWord + ' → ' + (corr || '(空)');
+      if(isStrike){
+        vals[0] = g.fixNoErr && !g.strikePick.length ? '这句没错'
+                : g.strikePick.length ? '划掉 ' + g.strikePick.join('、') : '(没选词)';
+      } else {
+        vals[0] = g.fixNoErr && !g.fixWord ? '这句没错'
+                : !g.fixWord ? '(没选词)'
+                : g.fixWord + ' → ' + (corr || '(空)');
+      }
     } else {
       perBlank = blanks.map((b, i)=>gramBlankOk(vals[i], b.answers));
     }
@@ -5548,7 +5778,7 @@ function renderGramRun(){
         ? [ (blanks[0] && blanks[0].target == null)
               ? '这句没错'
               : isStrike
-                ? '划掉 ' + blanks[0].target
+                ? '划掉 ' + blanks.map(b=>b.target).filter(Boolean).join('、')
                 : blanks[0].target + ' → ' + ((blanks[0].answers || [])[0] || '') ]
         : blanks.map(b=>(b.answers || [])[0] || ''),
       perBlank,
@@ -5561,7 +5791,7 @@ function renderGramRun(){
   wrap.querySelector('#gGo').onclick = ()=>{
     if(!g.checked){ check(); return; }
     g.checked = false;
-    g.fixWord = null; g.fixCorr = ''; g.fixNoErr = false; g.orderPick = []; g.bankPick = null;
+    g.fixWord = null; g.fixCorr = ''; g.fixNoErr = false; g.orderPick = []; g.bankPick = null; g.strikePick = [];
     g.idx += 1;
     if(g.idx >= g.queue.length) finishGrammar();
     else render();
@@ -5582,7 +5812,35 @@ function renderGramRun(){
   // 改错：点句子里的词 → 解锁下面的输入框
   const fixTo = wrap.querySelector('#gFixTo');
   const fixFrom = wrap.querySelector('#gFixFrom');
-  wrap.querySelectorAll('.gram-tok').forEach(btn=>{
+  const strikeMax = blanks.length;
+  const paintStrike = ()=>{
+    wrap.querySelectorAll('.gram-tok').forEach(b=>{
+      b.classList.toggle('gram-tok-struck', g.strikePick.indexOf(b.dataset.word) >= 0);
+    });
+    if(fixFrom){
+      fixFrom.textContent = g.strikePick.length
+        ? '划掉：' + g.strikePick.join('、')
+        : (strikeMax > 1 ? `点句子里多余的词（${strikeMax} 个）` : '点句子里多余的那个词');
+      fixFrom.classList.toggle('gram-fix-set', !!g.strikePick.length);
+    }
+  };
+  if(isStrike){
+    paintStrike();
+    wrap.querySelectorAll('.gram-tok').forEach(btn=>{
+      btn.onclick = ()=>{
+        if(g.checked) return;
+        const w = btn.dataset.word;
+        const at = g.strikePick.indexOf(w);
+        if(at >= 0) g.strikePick.splice(at, 1);
+        // 最多只能点 target 那么多个，想换要先取消 —— 否则全点一遍就满分
+        else if(g.strikePick.length < strikeMax) g.strikePick.push(w);
+        else return;
+        g.fixNoErr = false;
+        paintStrike();
+      };
+    });
+  }
+  else wrap.querySelectorAll('.gram-tok').forEach(btn=>{
     btn.onclick = ()=>{
       if(g.checked) return;
       const same = btn.classList.contains('gram-tok-on');
@@ -5602,8 +5860,8 @@ function renderGramRun(){
   });
   const noErr = wrap.querySelector('#gNoErr');
   if(noErr) noErr.onclick = ()=>{
-    g.fixNoErr = true; g.fixWord = null;
-    wrap.querySelectorAll('.gram-tok').forEach(x=>x.classList.remove('gram-tok-on'));
+    g.fixNoErr = true; g.fixWord = null; g.strikePick = [];
+    wrap.querySelectorAll('.gram-tok').forEach(x=>x.classList.remove('gram-tok-on','gram-tok-struck'));
     if(fixTo){ fixTo.value = ''; fixTo.disabled = true; }
     check();
   };
@@ -5752,6 +6010,7 @@ function renderGramResult(){
   const rate = pct(r.correct, r.total);
   const wrap = document.createElement('div');
   const wrongItems = (r.results || []).filter(x=>x.perBlank.some(ok=>!ok));
+  const solo = !r.hw;
   wrap.innerHTML = `
     <div class="hero">
       <div class="eyebrow">语法练习</div>
@@ -5775,10 +6034,19 @@ function renderGramResult(){
           </div>`).join('')}
       </div>
     </div>` : `<div class="card"><div class="rec-box" style="margin:0;">全对，这套语法点已经掌握了。</div></div>`}
-    <button class="btn btn-primary btn-block" id="gDone">回到首页</button>`;
+    ${solo ? `<button class="btn btn-orange btn-block" id="gAgain" style="margin-bottom:10px;">再练一次</button>` : ''}
+    <button class="btn btn-primary btn-block" id="gDone">${solo ? '回语法主页' : '回到首页'}</button>`;
+  const again = wrap.querySelector('#gAgain');
+  if(again) again.onclick = ()=>{
+    const set = GRAM_BANK.find(x=>x.title === r.label);
+    state.gramResult = null;
+    if(set) startGrammar({ code:'solo-' + set.id, title:set.title, items:set.items }, true);
+    else { state.gram = null; state.screen = 'gramHome'; render(); }
+  };
   wrap.querySelector('#gDone').onclick = ()=>{
+    const back = solo ? 'gramHome' : 'dashboard';
     state.gram = null; state.gramResult = null; clearHwFromUrl();
-    state.screen = state.profile ? 'dashboard' : 'auth';
+    state.screen = state.profile ? back : 'auth';
     render();
   };
   return wrap;
