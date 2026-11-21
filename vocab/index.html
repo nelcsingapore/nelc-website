@@ -5956,9 +5956,16 @@ function renderGramRun(){
   }
 
   wrap.querySelector('#gQuit').onclick = ()=>{
-    if(!confirm('现在结束的话，这次的答题不会交给老师。确定吗？')) return;
+    /* 自己练的没有老师，别拿交作业吓唬人；作业才提这一句。
+       回哪儿也分开：自己练回语法主页，作业回词汇首页。
+       访客也是有档案的人 —— 原来这里把访客一律丢回登录页，
+       点「结束」等于被踢出去，看着就像按钮坏了。 */
+    const msg = g.solo
+      ? '现在结束的话，这次练习不记成绩。确定吗？'
+      : '现在结束的话，这次的答题不会交给老师。确定吗？';
+    if(!confirm(msg)) return;
     state.gram = null;
-    state.screen = state.profile && !state.profile.isGuest ? 'dashboard' : 'auth';
+    state.screen = state.profile ? (g.solo ? 'gramHome' : 'dashboard') : 'auth';
     render();
   };
 
