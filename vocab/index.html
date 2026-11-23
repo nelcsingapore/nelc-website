@@ -561,6 +561,11 @@
   input[type=text].gram-in-fix:disabled{ background:#F2F2F0; color:var(--ink-soft); border-style:dashed; }
 
   /* 连词成句：词卡 + 句子托盘 */
+  .chip-danger{ border-color:#E0B4B4; color:#A33; }
+  .chip-danger:hover{ background:#FBEDED; }
+  .btn-danger{ background:#A33; color:#fff; border:1px solid #A33; }
+  .btn-danger:hover{ background:#8C2A2A; }
+  .btn-danger:disabled{ background:#D9BDBD; border-color:#D9BDBD; cursor:not-allowed; }
   .gram-set-list{ display:flex; flex-direction:column; gap:12px; }
   .gram-set{ display:flex; align-items:center; gap:14px; }
   .gram-set-main{ flex:1; min-width:0; }
@@ -5080,6 +5085,20 @@ async function putAssignment(a){
   requireCloud();
   await dbRetry(()=>db.collection(HW_COL).doc(a.code).set(a));
 }
+/* 删除一份作业。
+   Firestore 不会连带删子集合 —— 作业文档没了，submissions 还孤零零留在
+   数据库里，谁也看不到、也删不掉。所以必须先逐条删提交，再删作业本身。
+   顺序反过来的话，规则里 isTeacher() 还在，但作业文档已经不存在，
+   前端再也拿不到这些提交的路径。 */
+async function deleteAssignment(code){
+  requireCloud();
+  const snap = await dbRetry(()=>db.collection(HW_COL).doc(code).collection('submissions').get());
+  for(const d of snap.docs){
+    await dbRetry(()=>db.collection(HW_COL).doc(code).collection('submissions').doc(d.id).delete());
+  }
+  await dbRetry(()=>db.collection(HW_COL).doc(code).delete());
+}
+
 async function listAssignments(teacherUid){
   requireCloud();
   const snap = await dbRetry(()=>db.collection(HW_COL).where('teacherUid','==',teacherUid).get());
@@ -7077,7 +7096,7 @@ function renderHwList(){
 
   wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'teacherList'; render(); };
   wrap.querySelector('#hwNewBtn').onclick = ()=>{
-    const p = state.teacherProfile;
+    state.hwEdit = null;              // 上次改到一半退出来的，别让它跟着新作业走
     state.hwDraft = {
       type: 'vocab',
       title: '', due: '', requireLogin: false,
@@ -7144,10 +7163,11 @@ function renderHwNewGram(){
   const wrap = document.createElement('div');
   wrap.innerHTML = `
     <div class="session-head">
-      <h2 style="margin:0;">布置新作业</h2>
-      <button class="btn-ghost" id="hwBack">← 返回作业列表</button>
+      <h2 style="margin:0;">${state.hwEdit ? '修改作业' : '布置新作业'}</h2>
+      <button class="btn-ghost" id="hwBack">${state.hwEdit ? '取消修改' : '← 返回作业列表'}</button>
     </div>
     <div class="card">
+      ${state.hwEdit ? `<div class="rec-box" style="margin:0 0 16px;">正在修改 <b>${esc(state.hwEdit.code)}</b> —— 作业码和链接不变，学生手上的链接照样能用。</div>` : ''}
       <div class="field">
         <label class="field-label">作业名称</label>
         <input type="text" id="hwTitle" placeholder="例如：现在时复习" value="${esc(d.title)}" maxlength="40">
@@ -7185,7 +7205,7 @@ function renderHwNewGram(){
 
       <div class="setup-foot">
         <div style="color:var(--ink-soft); font-size:13px;">满分 <b>${blanks}</b> 分（一题多空的，每空算一分）</div>
-        <button class="btn btn-orange" id="hwCreate" ${items.length?'':'disabled'}>生成作业链接 →</button>
+        <button class="btn btn-orange" id="hwCreate" ${items.length?'':'disabled'}>${state.hwEdit ? '保存修改' : '生成作业链接 →'}</button>
       </div>
     </div>`;
 
@@ -7196,7 +7216,7 @@ function renderHwNewGram(){
   bindHwTypeChips(wrap, d);
   wrap.querySelectorAll('[data-gid]').forEach(b=>b.onclick = ()=>{ d.gid = b.dataset.gid; render(); });
   wrap.querySelectorAll('[data-req]').forEach(b=>b.onclick = ()=>{ d.requireLogin = b.dataset.req === '1'; render(); });
-  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'hwList'; render(); };
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.hwEdit = null; state.screen = 'hwList'; render(); };
   wrap.querySelector('#hwCreate').onclick = ()=>createGrammarAssignment(wrap);
   return wrap;
 }
@@ -7209,33 +7229,45 @@ async function createGrammarAssignment(wrap){
   if(!items.length){ toast('这套题库是空的。'); return; }
 
   const scopeLabel = `${set.title}（${set.level} · ${set.topic}）`;
+  const ed = state.hwEdit;
   const a = {
-    code: newHwCode(),
-    teacherUid: tp.uid,
-    teacherName: tp.username || '老师',
+    code: ed ? ed.code : newHwCode(),
+    teacherUid: ed ? ed.teacherUid : tp.uid,
+    teacherName: ed ? ed.teacherName : (tp.username || '老师'),
     title: (d.title || '').trim() || scopeLabel,
     type: 'grammar',
     gid: set.id,
     scopeLabel,
     requireLogin: !!d.requireLogin,
     due: d.due || null,
-    open: true,
+    open: ed ? ed.open !== false : true,
     items,
-    createdAt: new Date().toISOString()
+    createdAt: ed ? ed.createdAt : new Date().toISOString()
   };
 
   const btn = wrap.querySelector('#hwCreate');
-  btn.disabled = true; btn.textContent = '生成中…';
+  btn.disabled = true; btn.textContent = ed ? '保存中…' : '生成中…';
   try{
     await putAssignment(a);
-    state.hwList = [a].concat(state.hwList || []);
-    state.hwCounts = { ...(state.hwCounts||{}), [a.code]: 0 };
-    state.hwSel = a; state.hwSubs = [];
-    state.screen = 'hwDetail'; render();
-    toast('语法作业已生成，把链接发给学生就行。');
+    if(ed){
+      state.hwList = (state.hwList || []).map(x=>x.code === a.code ? a : x);
+      state.hwEdit = null;
+      state.hwSel = a;
+      // 题目换了，旧提交的对错已经对不上新题，重新拉一遍而不是沿用内存里那份
+      state.hwSubs = null;
+      state.screen = 'hwDetail'; render();
+      openHwDetail(a.code);
+      toast('已保存。作业码没变，学生手上的链接照样能用。');
+    } else {
+      state.hwList = [a].concat(state.hwList || []);
+      state.hwCounts = { ...(state.hwCounts||{}), [a.code]: 0 };
+      state.hwSel = a; state.hwSubs = [];
+      state.screen = 'hwDetail'; render();
+      toast('语法作业已生成，把链接发给学生就行。');
+    }
   }catch(err){
-    btn.disabled = false; btn.textContent = '生成作业链接 →';
-    toast('生成失败：' + friendlyDbError(err));
+    btn.disabled = false; btn.textContent = ed ? '保存修改' : '生成作业链接 →';
+    toast((ed ? '保存失败：' : '生成失败：') + friendlyDbError(err));
   }
 }
 
@@ -7253,10 +7285,11 @@ function renderHwNew(){
   const wrap = document.createElement('div');
   wrap.innerHTML = `
     <div class="session-head">
-      <h2 style="margin:0;">布置新作业</h2>
-      <button class="btn-ghost" id="hwBack">← 返回作业列表</button>
+      <h2 style="margin:0;">${state.hwEdit ? '修改作业' : '布置新作业'}</h2>
+      <button class="btn-ghost" id="hwBack">${state.hwEdit ? '取消修改' : '← 返回作业列表'}</button>
     </div>
     <div class="card">
+      ${state.hwEdit ? `<div class="rec-box" style="margin:0 0 16px;">正在修改 <b>${esc(state.hwEdit.code)}</b> —— 作业码和链接不变，学生手上的链接照样能用。</div>` : ''}
       <div class="field">
         <label class="field-label">作业名称</label>
         <input type="text" id="hwTitle" placeholder="例如：第 3 单元听写" value="${esc(d.title)}" maxlength="40">
@@ -7329,7 +7362,7 @@ function renderHwNew(){
       <div class="setup-foot">
         <div style="color:var(--ink-soft); font-size:13px;">可选词数：<b>${pool.length}</b>${
           d.mode==='sent' && rawPool.length!==pool.length ? `（${rawPool.length} 词里 ${pool.length} 个有课本例句）` : ''}</div>
-        <button class="btn btn-orange" id="hwCreate" ${pool.length<4?'disabled':''}>生成作业链接 →</button>
+        <button class="btn btn-orange" id="hwCreate" ${pool.length<4?'disabled':''}>${state.hwEdit ? '保存修改' : '生成作业链接 →'}</button>
       </div>
       ${pool.length<4 ? `<p style="color:var(--ink-soft); font-size:13px; margin-top:10px;">这个范围里能出的题太少（至少要 4 个词），换个范围或题型。</p>` : ''}
     </div>`;
@@ -7352,7 +7385,7 @@ function renderHwNew(){
   wrap.querySelector('#hwHint').onclick = ()=>upd(()=>{ d.hint = !d.hint; });
   const hwSentCn = wrap.querySelector('#hwSentCn');
   if(hwSentCn) hwSentCn.onclick = ()=>upd(()=>{ d.sentCn = d.sentCn === false; });
-  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'hwList'; render(); };
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.hwEdit = null; state.screen = 'hwList'; render(); };
   wrap.querySelector('#hwCreate').onclick = ()=>createAssignment(wrap);
   return wrap;
 }
@@ -7381,32 +7414,44 @@ async function createAssignment(wrap){
     def: w.def || '', ex: w.ex || '', sid: w.sid || d.sid
   }));
 
+  const ed = state.hwEdit;
   const a = {
-    code: newHwCode(),
-    teacherUid: tp.uid,
-    teacherName: tp.username || '老师',
+    code: ed ? ed.code : newHwCode(),
+    teacherUid: ed ? ed.teacherUid : tp.uid,
+    teacherName: ed ? ed.teacherName : (tp.username || '老师'),
     title: (d.title || '').trim() || scopeLabel,
     mode: d.mode, hint: !!d.hint, sentCn: d.sentCn !== false,
     scopeLabel,
     requireLogin: !!d.requireLogin,
     due: d.due || null,
-    open: true,
+    open: ed ? ed.open !== false : true,
     words,
-    createdAt: new Date().toISOString()
+    createdAt: ed ? ed.createdAt : new Date().toISOString()
   };
 
   const btn = wrap.querySelector('#hwCreate');
-  btn.disabled = true; btn.textContent = '生成中…';
+  btn.disabled = true; btn.textContent = ed ? '保存中…' : '生成中…';
   try{
     await putAssignment(a);
-    state.hwList = [a].concat(state.hwList || []);
-    state.hwCounts = { ...(state.hwCounts||{}), [a.code]: 0 };
-    state.hwSel = a; state.hwSubs = [];
-    state.screen = 'hwDetail'; render();
-    toast('作业已生成，把链接发给学生就行。');
+    if(ed){
+      state.hwList = (state.hwList || []).map(x=>x.code === a.code ? a : x);
+      state.hwEdit = null;
+      state.hwSel = a;
+      // 题目换了，旧提交的对错已经对不上新题，重新拉一遍而不是沿用内存里那份
+      state.hwSubs = null;
+      state.screen = 'hwDetail'; render();
+      openHwDetail(a.code);
+      toast('已保存。作业码没变，学生手上的链接照样能用。');
+    } else {
+      state.hwList = [a].concat(state.hwList || []);
+      state.hwCounts = { ...(state.hwCounts||{}), [a.code]: 0 };
+      state.hwSel = a; state.hwSubs = [];
+      state.screen = 'hwDetail'; render();
+      toast('作业已生成，把链接发给学生就行。');
+    }
   }catch(err){
-    btn.disabled = false; btn.textContent = '生成作业链接 →';
-    toast('生成失败：' + friendlyDbError(err));
+    btn.disabled = false; btn.textContent = ed ? '保存修改' : '生成作业链接 →';
+    toast((ed ? '保存失败：' : '生成失败：') + friendlyDbError(err));
   }
 }
 
@@ -7460,7 +7505,10 @@ function renderHwDetail(){
       <div class="chip-row" style="margin-top:16px;">
         <button class="chip ${a.open?'chip-on':''}" id="hwToggle">${a.open?'✅ 开放提交中 · 点此关闭':'🔒 已关闭 · 点此重新开放'}</button>
         <button class="chip" id="hwCsv" ${done?'':'disabled'}>⬇️ 导出成绩 CSV</button>
+        <button class="chip" id="hwEdit">✏️ 修改</button>
+        <button class="chip chip-danger" id="hwDel">🗑️ 删除</button>
       </div>
+      <p class="hw-note" style="margin-top:10px;">布置错了范围就点「修改」—— 链接和作业码不变，学生手上的链接照样能用。</p>
     </div>
 
     ${subs === null ? `<div class="card"><p style="color:var(--ink-soft); margin:0;">读取提交情况…</p></div>` : `
@@ -7503,7 +7551,7 @@ function renderHwDetail(){
     </div>` : ''}`}`;
 
   wireSpeak(wrap);
-  wrap.querySelector('#hwBack').onclick = ()=>{ state.screen = 'hwList'; render(); };
+  wrap.querySelector('#hwBack').onclick = ()=>{ state.hwEdit = null; state.screen = 'hwList'; render(); };
   wrap.querySelector('#hwCopy').onclick = ()=>{
     const box = wrap.querySelector('#hwLinkBox');
     box.select(); box.setSelectionRange(0, 99999);
@@ -7525,10 +7573,101 @@ function renderHwDetail(){
   };
   const csv = wrap.querySelector('#hwCsv');
   if(csv) csv.onclick = ()=>exportHwCsv(a, subs||[]);
+  wrap.querySelector('#hwEdit').onclick = ()=>startHwEdit(a, done);
+  wrap.querySelector('#hwDel').onclick = ()=>confirmHwDelete(a, done);
   wrap.querySelectorAll('.hw-sub-row').forEach(row=>{
     row.onclick = ()=>showSubmissionDetail(a, (subs||[]).find(x=>x.id === row.dataset.sub));
   });
   return wrap;
+}
+
+/* 删除确认。
+   没人交过就一句话确认；已经有人交了，成绩会跟着一起没，
+   所以要求把作业码敲一遍 —— 不是为难人，是防手滑点掉一整个班的记录。 */
+function confirmHwDelete(a, done){
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  const close = ()=>overlay.remove();
+  overlay.onclick = e=>{ if(e.target === overlay) close(); };
+  const risky = done > 0;
+  overlay.innerHTML = `
+    <div class="sheet" style="max-width:460px;">
+      <h3 style="margin-top:0;">删除这份作业？</h3>
+      <div class="warn-box" style="margin:0 0 14px;">
+        <b>${esc(a.title || hwScopeLabel(a))}</b><br>
+        作业码 ${esc(a.code)} · ${esc(hwScopeLabel(a))}<br>
+        ${risky ? `已经有 <b>${done}</b> 份提交，连同成绩一起删掉。` : '还没有人提交。'}
+        <br><b>删掉就找不回来了</b>，学生手上的链接也会失效。
+      </div>
+      ${risky ? `
+        <label class="field-label">确认请输入作业码 <b class="hw-code">${esc(a.code)}</b></label>
+        <input type="text" id="delCode" placeholder="${esc(a.code)}" autocomplete="off">` : ''}
+      <div style="display:flex; gap:10px; margin-top:18px;">
+        <button class="btn btn-outline" id="delCancel" style="flex:1;">取消</button>
+        <button class="btn btn-danger" id="delGo" style="flex:1;" ${risky?'disabled':''}>确定删除</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const go = overlay.querySelector('#delGo');
+  const box = overlay.querySelector('#delCode');
+  if(box){
+    box.oninput = ()=>{ go.disabled = box.value.trim().toUpperCase() !== String(a.code).toUpperCase(); };
+    box.focus();
+  }
+  overlay.querySelector('#delCancel').onclick = close;
+  go.onclick = async ()=>{
+    go.disabled = true; go.textContent = '删除中…';
+    try{
+      await deleteAssignment(a.code);
+      state.hwList = (state.hwList || []).filter(x=>x.code !== a.code);
+      if(state.hwCounts) delete state.hwCounts[a.code];
+      state.hwSel = null; state.hwSubs = null;
+      close();
+      state.screen = 'hwList'; render();
+      toast('作业已删除。');
+    }catch(err){
+      go.disabled = false; go.textContent = '确定删除';
+      toast('删不掉：' + friendlyDbError(err));
+    }
+  };
+}
+
+/* 改作业：沿用同一个作业码，学生手上的链接不作废。
+   已经有人交了的话要先说清楚 —— 换了题目，旧成绩就不是一张卷子的分了。 */
+function startHwEdit(a, done){
+  if(done > 0 && !confirm(
+      '已经有 ' + done + ' 份提交了。\n\n改了题目之后，这些成绩对应的是旧题，和新交的不是同一张卷子。\n\n要继续修改吗？')) return;
+  const isGram = hwType(a) === 'grammar';
+  const d = {
+    type: isGram ? 'grammar' : 'vocab',
+    title: a.title || '', due: a.due || '', requireLogin: !!a.requireLogin,
+    scope: 'unit', sid: (allSeries()[0]||{}).id, bi: 0, ui: 0,
+    mode: a.mode || 'audio', count: (a.words ? a.words.length : 20),
+    hint: !!a.hint, sentCn: a.sentCn !== false,
+    gid: a.gid || (GRAM_BANK[0]||{}).id, gcount: 'all'
+  };
+  // 从 scopeLabel 反查原来选的是哪一册哪一单元，尽量把表单还原到原样
+  if(!isGram){
+    const label = String(a.scopeLabel || '');
+    outer: for(const sr of allSeries()){
+      for(let bi = 0; bi < sr.books.length; bi++){
+        const b = sr.books[bi];
+        for(let ui = 0; ui < b.units.length; ui++){
+          if(label.indexOf(sr.short) >= 0 && label.indexOf(b.label) >= 0 && label.indexOf(b.units[ui].t) >= 0){
+            d.sid = sr.id; d.bi = bi; d.ui = ui; d.scope = 'unit'; break outer;
+          }
+        }
+        if(label.indexOf(sr.short) >= 0 && label.indexOf(b.label) >= 0){
+          d.sid = sr.id; d.bi = bi; d.scope = 'book';
+        }
+      }
+    }
+    // count 要对得上题量选项，否则进去显示成「全部」
+    if(![10, 20, 30].includes(d.count)) d.count = 'all';
+  }
+  state.hwDraft = d;
+  state.hwEdit = { code: a.code, createdAt: a.createdAt, open: a.open, teacherUid: a.teacherUid, teacherName: a.teacherName };
+  state.screen = 'hwNew'; render();
 }
 
 function showSubmissionDetail(a, sb){
