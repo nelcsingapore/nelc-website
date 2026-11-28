@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NELC 词汇学院 · A Bigger World Through English</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<script>
+const CELESTE_PRACTICE = new URLSearchParams(location.search).get('practice') === 'celeste';
+if(!CELESTE_PRACTICE) document.write(`<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+`);
+</script>
 <style>
   :root{
     --navy:#1B3A6B;
@@ -860,9 +864,12 @@
 </style>
 </head>
 <!-- Firebase SDK (compat build, works alongside the existing plain script tag below) -->
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+if(!CELESTE_PRACTICE) document.write(`<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"><\/script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"><\/script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"><\/script>
+`);
+</script>
 <body>
 <div id="app"></div>
 
@@ -890,7 +897,7 @@ const firebaseConfig = {
    项目归属 nelcsingapore@gmail.com —— 之前"Google 登录失败/unavailable"的真正原因
    是这个项目里压根没建过数据库，不是网络也不是 provider 没启用。
    万一以后后端又不可用，把这里改回 false 即可干净地退回访客模式。 */
-const ACCOUNTS_ENABLED = true;
+const ACCOUNTS_ENABLED = !CELESTE_PRACTICE;
 
 let auth = null, db = null, CLOUD_OK = false;
 let DB_OK = true;              // Firestore 单独的健康状态：Auth 通了不代表数据库也通
@@ -2261,6 +2268,7 @@ function clearOffline(uid){ try{ localStorage.removeItem(OFFLINE_KEY(uid)); }cat
 
 let dbDownWarned = false;
 async function saveProfile(p){
+  if(CELESTE_PRACTICE) return;
   if(p.isGuest){
     // 访客不碰云端，写 localStorage；无痕模式下会失败，提醒一次就够了
     if(!saveGuestProfile(p) && !guestStorageWarned){
@@ -2908,6 +2916,7 @@ function renderTopbar(){
   bar.querySelector('#logoutBtn').onclick = async ()=>{
     TTS.stop();
     if(state.profile && state.profile.isGuest){
+      if(CELESTE_PRACTICE){ location.assign('/vocab/'); return; }
       // 访客的数据只在这台设备上，退出前问清楚要不要留着
       const keep = confirm('要保留这台设备上的访客练习记录吗？\n\n「确定」＝ 保留，下次打开还能接着练\n「取消」＝ 清空记录');
       if(!keep) clearGuestProfile();
@@ -3635,8 +3644,8 @@ function renderDashboard(){
       <div class="guest-banner">
         <div>
           <b>你正在用访客模式</b>
-          <span>进度只存在这台设备上，换设备或清空浏览器数据就会丢失${ACCOUNTS_ENABLED?'，老师也看不到你的记录':''}。${
-            ACCOUNTS_ENABLED?'':'（账号功能还没开通，开通后可以把记录并进账号。）'}</span>
+          ${CELESTE_PRACTICE ? '<span>本次练习结果在当前页面查看，关闭后不保留。</span>' : `<span>进度只存在这台设备上，换设备或清空浏览器数据就会丢失${ACCOUNTS_ENABLED?'，老师也看不到你的记录':''}。${
+            ACCOUNTS_ENABLED?'':'（账号功能还没开通，开通后可以把记录并进账号。）'}</span>`}
         </div>
         ${ACCOUNTS_ENABLED ? '<button class="btn btn-orange" id="bannerSave">注册保存进度</button>' : ''}
       </div>` : ''}
@@ -7933,6 +7942,14 @@ function renderImportBook(){
    启动
    ========================================================= */
 (function boot(){
+  if(CELESTE_PRACTICE){
+    state.profile = { ...newGuestProfile(), username: 'Celeste', sid: 's1' };
+    state.dictCfg.scope = 'unit';
+    if(!TTS.supported()) state.dictCfg.mode = 'cn';
+    state.screen = 'dictSetup';
+    render();
+    return;
+  }
   render();                       // 先画一个"载入中"
 
   /* 作业链接：#hw=XXXXXX。不管学生是登录状态、访客还是第一次来，
