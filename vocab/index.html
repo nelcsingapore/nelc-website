@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NELC 词汇学院 · A Bigger World Through English</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy:#1B3A6B;
@@ -858,14 +856,10 @@
   }
 
 </style>
+<meta name="referrer" content="no-referrer">
 </head>
-<!-- Firebase SDK (compat build, works alongside the existing plain script tag below) -->
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <body>
 <div id="app"></div>
-
 <script>
 /* =========================================================
    NELC VOCAB APP
@@ -881,37 +875,49 @@ const firebaseConfig = {
   messagingSenderId: "159278746372",
   appId: "1:159278746372:web:07b036ee9013ccbf585e51"
 };
-// Firebase SDK 是从 CDN 加载的，可能被墙、被拦截或纯粹没网。
-// 初始化一旦在顶层抛错，整个脚本就停了、页面全白 —— 所以这里必须兜住，
-// 兜不住也没关系：访客模式完全不依赖云端，本地照样能背单词和听写。
-/* ===== 账号功能开关 =====
-   2026-09-26：nelc-vocab2 的 Firestore 数据库已创建（asia-southeast1）、
-   安全规则已发布，账号功能恢复。
-   项目归属 nelcsingapore@gmail.com —— 之前"Google 登录失败/unavailable"的真正原因
-   是这个项目里压根没建过数据库，不是网络也不是 provider 没启用。
-   万一以后后端又不可用，把这里改回 false 即可干净地退回访客模式。 */
-const ACCOUNTS_ENABLED = true;
-
+const TEACHER_MODE = new URLSearchParams(location.search).get('teacher') === '1' &&
+  !readHwCodeFromUrl() && !new URLSearchParams(location.hash.slice(1)).has('login');
 let auth = null, db = null, CLOUD_OK = false;
-let DB_OK = true;              // Firestore 单独的健康状态：Auth 通了不代表数据库也通
-let DB_LAST_ERROR = '';
-try{
-  if(ACCOUNTS_ENABLED && typeof firebase !== 'undefined' && firebase.initializeApp){
-    firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    /* Firestore 默认走 WebChannel 流式连接，在代理、企业防火墙、部分地区网络下
-       经常被掐断，表现就是报 unavailable。官方的应对是退回长轮询 ——
-       autoDetect 会先试流式，不通再自动切，所以正常网络下不会变慢。
-       settings() 必须在任何一次读写之前调用。 */
-    try{
-      db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
-    }catch(e){
-      try{ db.settings({ experimentalForceLongPolling: true, merge: true }); }catch(e2){}
-    }
-    CLOUD_OK = true;
+let DB_OK = true, DB_LAST_ERROR = '';
+let studentVersion = 0;
+let progressWrites = Promise.resolve();
+
+async function api(path, body, bearer){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), 12000);
+  try{
+    const headers = {};
+    if(body !== undefined) headers['Content-Type'] = 'application/json';
+    if(bearer) headers.Authorization = 'Bearer ' + bearer;
+    const response = await fetch('/vocab/api/' + path, {
+      method: body === undefined ? 'GET' : 'POST',
+      credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+      headers, body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const data = await response.json().catch(()=>null);
+    if(!response.ok || data === null) throw Object.assign(
+      new Error(data?.error || '暂时连不上练习服务，请重试。'), { status: response.status });
+    return data;
+  }finally{ clearTimeout(timer); }
+}
+
+async function initTeacherFirebase(){
+  for(const name of ['app', 'auth', 'firestore']){
+    await new Promise((resolve, reject)=>{
+      const script = document.createElement('script');
+      const timer = setTimeout(()=>{ script.remove(); reject(new Error('教师登录服务连接超时。')); }, 10000);
+      script.onload = ()=>{ clearTimeout(timer); resolve(); };
+      script.onerror = ()=>{ clearTimeout(timer); reject(new Error('教师登录服务暂不可用。')); };
+      script.src = 'https://www.gstatic.com/firebasejs/10.13.0/firebase-' + name + '-compat.js';
+      document.head.append(script);
+    });
   }
-}catch(e){ console.warn('云端不可用，转为纯本地模式：', e); }
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+  CLOUD_OK = true;
+}
 
 /* Firestore 的瞬时故障（unavailable / deadline-exceeded）重试几次往往就好了，
    不该让用户因为一次网络抖动就登不进去。 */
@@ -1022,7 +1028,7 @@ function friendlyAuthError(err){
     return '浏览器禁用了本地存储（可能是无痕模式或屏蔽了 Cookie），Google 登录用不了 —— 可以改用用户名密码登录。';
   if(code === 'auth/internal-error') return 'Firebase 内部错误，通常是配置没保存好。请检查 Authentication 里 Google 登录是否已启用。';
   if(code === 'app/offline') return '现在连不上服务器，没法注册或登录 —— 可以先用访客模式练习，联网后再保存进度。';
-  if(code === 'auth/network-request-failed') return '网络好像断了，可以先用访客模式练习。';
+  if(code === 'auth/network-request-failed') return '教师登录服务连接失败，请重试。';
   if(code === 'app/no-recovery-email')
     return '这个账号注册时没填邮箱，没法用邮件重置密码 —— 请联系老师，或者用另一个用户名重新注册。';
   if(code === 'auth/requires-recent-login')
@@ -2216,277 +2222,55 @@ let state = {
   // 教师
   teacherStudents: [], teacherSelected: null, teacherProfile: null, rankMode: 'learned',
   // 作业
-  hw: null, hwName: '', hwDone: {}, hwList: [], hwCounts: {}, hwSel: null,
+  hw: null, hwDone: {}, hwList: [], hwCounts: {}, hwSel: null,
   hwSubs: null, hwDraft: null, hwLoading: false, hwSubmitState: null,
   // 其他
   pickerOpen: false
 };
 
-/* ---------- 访客档案（只存这台设备） ---------- */
-const GUEST_LS_KEY = 'nelc_guest_profile';
-function loadGuestProfile(){
-  try{
-    const raw = localStorage.getItem(GUEST_LS_KEY);
-    return raw ? migrateProfile(JSON.parse(raw)) : null;
-  }catch(e){ return null; }
-}
-function saveGuestProfile(p){
-  try{ localStorage.setItem(GUEST_LS_KEY, JSON.stringify(p)); return true; }
-  catch(e){ return false; }
-}
-function clearGuestProfile(){ try{ localStorage.removeItem(GUEST_LS_KEY); }catch(e){} setGuestActive(false); }
-// 上次是不是在用访客模式。正式账号退出登录后，不该被莫名其妙丢进别人的访客记录里。
-const GUEST_ACTIVE_KEY = 'nelc_guest_active';
-function guestActive(){ try{ return localStorage.getItem(GUEST_ACTIVE_KEY) === '1'; }catch(e){ return false; } }
-function setGuestActive(on){
-  try{ on ? localStorage.setItem(GUEST_ACTIVE_KEY,'1') : localStorage.removeItem(GUEST_ACTIVE_KEY); }catch(e){}
-}
 function newGuestProfile(){
-  const p = newProfile('访客', 'guest');
-  p.isGuest = true;
-  p.startedAt = todayStr();
-  return p;
+  return { ...newProfile('访客', 'guest'), isGuest: true, startedAt: todayStr() };
 }
-
-let guestStorageWarned = false;
-const OFFLINE_KEY = uid=>'nelc_offline_' + uid;
-function saveOffline(p){
-  try{ localStorage.setItem(OFFLINE_KEY(p.uid), JSON.stringify(p)); return true; }catch(e){ return false; }
-}
-function loadOffline(uid){
-  try{ const r = localStorage.getItem(OFFLINE_KEY(uid)); return r ? migrateProfile(JSON.parse(r)) : null; }
-  catch(e){ return null; }
-}
-function clearOffline(uid){ try{ localStorage.removeItem(OFFLINE_KEY(uid)); }catch(e){} }
 
 let dbDownWarned = false;
 async function saveProfile(p){
-  if(p.isGuest){
-    // 访客不碰云端，写 localStorage；无痕模式下会失败，提醒一次就够了
-    if(!saveGuestProfile(p) && !guestStorageWarned){
-      guestStorageWarned = true;
-      toast('这个浏览器不允许本地存储（无痕模式？），关掉页面进度就没了。');
+  if(p.isGuest) return;
+  const snapshot = JSON.parse(JSON.stringify(p));
+  progressWrites = progressWrites.then(async ()=>{
+    try{
+      const result = await api('progress', { profile: snapshot, version: studentVersion });
+      studentVersion = result.version;
+      p.offlineOnly = false;
+      dbDownWarned = false;
+    }catch(error){
+      p.offlineOnly = true;
+      if(!dbDownWarned){
+        dbDownWarned = true;
+        toast(error.message || '进度尚未保存，请重试。');
+      }
     }
-    return;
-  }
-  if(!CLOUD_OK){ saveOffline(p); toast('连不上服务器，进度先存在这台设备上。'); return; }
-  try{
-    // offlineOnly 是本机的临时状态，不是账号数据 —— 写进云端的话，
-    // 换台设备登录会带着这个标记回来，显示一个莫名其妙的横幅。
-    const payload = { ...p };
-    delete payload.offlineOnly;
-    await dbRetry(()=>db.collection('users').doc(p.uid).set(payload));
-    // 掉线期间存的本地副本已经传上去了，可以清掉
-    if(p.offlineOnly){ p.offlineOnly = false; clearOffline(p.uid); toast('数据库恢复了，本地进度已同步到云端。'); }
-  }catch(e){
-    console.warn('保存失败', e);
-    p.offlineOnly = true;
-    saveOffline(p);
-    if(!dbDownWarned){
-      dbDownWarned = true;
-      toast(isDbDown(e) ? '数据库连不上，进度先存本地，恢复后会自动同步。' : friendlyDbError(e));
-    }
-  }
-}
-
-/* ---------- 访客进度并入正式账号 ----------
-   访客练了半天，一注册就清零是说不过去的。所以注册/登录时把本地那份合并进来：
-   次数相加、记录拼接、进度取靠前的那个。合并成功后立刻清掉本地那份，
-   避免同一份练习记录被反复并进去。 */
-function mergeGuestInto(target, guest){
-  if(!guest) return target;
-  target.wordLog = target.wordLog || {};
-  Object.entries(guest.wordLog || {}).forEach(([w, g])=>{
-    const t = target.wordLog[w];
-    if(!t){ target.wordLog[w] = g; return; }
-    ['timesSeen','timesCorrect','timesWrong','dSeen','dOk','dBad'].forEach(k=>{
-      t[k] = (t[k] || 0) + (g[k] || 0);
-    });
-    if(!t.selfRating) t.selfRating = g.selfRating;
-    if(g.lastBad && (g.lastReviewed || '') >= (t.lastReviewed || '')) t.lastBad = g.lastBad;
-    if((g.firstLearned || '') && (!t.firstLearned || g.firstLearned < t.firstLearned)) t.firstLearned = g.firstLearned;
-    if((g.lastReviewed || '') > (t.lastReviewed || '')) t.lastReviewed = g.lastReviewed;
-    ['cn','ipa','pos','def','ex'].forEach(k=>{ if(!t[k] && g[k]) t[k] = g[k]; });
   });
-  const byDate = (a,b)=>String(a.date||'').localeCompare(String(b.date||''));
-  target.dictHistory = [...(target.dictHistory||[]), ...(guest.dictHistory||[])].sort(byDate).slice(-60);
-  target.history     = [...(target.history||[]),     ...(guest.history||[])].sort(byDate).slice(-200);
-  target.vocabTests  = [...(target.vocabTests||[]),  ...(guest.vocabTests||[])].sort(byDate).slice(-20);
-  const latest = target.vocabTests[target.vocabTests.length - 1];
-  if(latest){ target.vocabSize = latest.estimate; target.cefrEstimate = latest.cefr; }
-  target.streak = Math.max(target.streak || 0, guest.streak || 0);
-  if((guest.lastCompletedDate || '') > (target.lastCompletedDate || '')) target.lastCompletedDate = guest.lastCompletedDate;
-  // 正式账号已有的定级优先；没有就用访客那份
-  if(!target.sid && guest.sid){
-    target.sid = guest.sid; target.bookIndex = guest.bookIndex; target.unitIndex = guest.unitIndex;
-    target.placedAt = guest.placedAt; target.placementDetail = guest.placementDetail;
-  }
-  return target;
-}
-// 注册/登录成功后调用：把本地访客进度并进去并落盘
-async function absorbGuestProgress(profile){
-  const guest = loadGuestProfile();
-  if(!guest) return profile;
-  const hasProgress = Object.keys(guest.wordLog || {}).length || (guest.vocabTests || []).length;
-  if(!hasProgress){ clearGuestProfile(); return profile; }
-  mergeGuestInto(profile, guest);
-  await saveProfile(profile);
-  clearGuestProfile();      // 并进账号后就地清掉，免得重复合并
-  toast('已把访客练习记录并入你的账号');
-  return profile;
+  await progressWrites;
 }
 
-async function registerUser(username, password, recoveryEmail){
-  requireCloud();
-  const useReal = isRealEmail(recoveryEmail);
-  const authEmail = useReal ? String(recoveryEmail).trim() : usernameToEmail(username);
-  // 用真邮箱时，用户名的唯一性不再由邮箱唯一性保证，要单独查
-  if(useReal && await usernameTaken(username)){
-    throw { code: 'auth/email-already-in-use' };
-  }
-  const cred = await auth.createUserWithEmailAndPassword(authEmail, password);
-  const p = newProfile(username, cred.user.uid);
-  if(useReal) p.email = authEmail;
-  await saveProfile(p);
-  await claimUsername(username, authEmail, cred.user.uid);
-  return await absorbGuestProgress(p);
+async function resolveLoginEmail(login){
+  if(login.includes('@')) return login;
+  const username = cleanUsername(login);
+  return (await lookupAuthEmail(username)) || usernameToEmail(username);
 }
 
-/* 登录框同时接受用户名和邮箱：
-   带 @ 的直接当邮箱；否则先查映射表，查不到再退回假邮箱（老账号走这条）。 */
-async function resolveLoginEmail(idInput){
-  if(looksLikeEmail(idInput)) return String(idInput).trim();
-  return (await lookupAuthEmail(idInput)) || usernameToEmail(idInput);
+async function signInTeacher(user){
+  const doc = await dbRetry(()=>db.collection('users').doc(user.uid).get());
+  const profile = doc.data();
+  if(profile?.role !== 'teacher'){
+    await auth.signOut();
+    throw new Error('请使用教师账号。');
+  }
+  await enterAppWithProfile({ ...profile, uid: user.uid });
 }
 
-async function loginUser(idInput, password){
-  requireCloud();
-  const email = await resolveLoginEmail(idInput);
-  const cred = await auth.signInWithEmailAndPassword(email, password);
-  const p = await fetchProfile(cred.user.uid, cleanUsername(idInput) || 'student');
-  return await absorbGuestProgress(p);
-}
-
-/* 发送密码重置邮件。假邮箱账号会明确告诉用户"发不出去"，而不是假装成功。 */
-async function sendPasswordReset(idInput){
-  requireCloud();
-  const email = await resolveLoginEmail(idInput);
-  if(email.endsWith(FAKE_DOMAIN)){
-    throw { code: 'app/no-recovery-email',
-            message: '这个账号注册时没有填邮箱，没法用邮件重置密码。' };
-  }
-  await auth.sendPasswordResetEmail(email);
-  return email;
-}
-
-/* 给已有账号补绑真实邮箱：把认证身份换成真邮箱，之后就能重置密码了。 */
-async function attachRecoveryEmail(newEmail){
-  requireCloud();
-  const p = state.profile;
-  if(!isRealEmail(newEmail)) throw { code:'auth/invalid-email' };
-  const user = auth.currentUser;
-  if(!user) throw { code:'auth/unauthenticated' };
-  await user.updateEmail(String(newEmail).trim());
-  p.email = String(newEmail).trim();
-  await saveProfile(p);
-  await claimUsername(p.username, p.email, p.uid);
-  return p.email;
-}
-async function fetchProfile(uid, fallbackName){
-  requireCloud();
-  try{
-    const doc = await dbRetry(()=>db.collection('users').doc(uid).get());
-    if(doc.exists){
-      const cloud = migrateProfile(doc.data());
-      delete cloud.offlineOnly;   // 老数据里可能残留过这个标记
-      clearOffline(uid);          // 云端数据是权威的
-      return cloud;
-    }
-    const p = newProfile(fallbackName || 'student', uid);
-    await saveProfile(p);
-    return p;
-  }catch(err){
-    if(!isDbDown(err)) throw err;
-    /* 数据库连不上，但人已经登录成功了 —— 不该把他挡在门外。
-       有本地副本就用副本，没有就新建一份，标记成"只在本地"，
-       等数据库恢复时 saveProfile 会自动补传。 */
-    const local = loadOffline(uid) || newProfile(fallbackName || 'student', uid);
-    local.offlineOnly = true;
-    saveOffline(local);
-    return local;
-  }
-}
-async function ensureUniqueUsername(base){
-  requireCloud();
-  const clean = (base || 'student').toLowerCase().replace(/[^a-z0-9_.-]/g,'').slice(0,20) || 'student';
-  let suffix = 0;
-  while(suffix < 50){
-    const candidate = suffix === 0 ? clean : `${clean}${suffix}`;
-    const snap = await dbRetry(()=>db.collection('users').where('username','==',candidate).limit(1).get());
-    if(snap.empty) return candidate;
-    suffix++;
-  }
-  return clean + Date.now().toString().slice(-4);
-}
-/* 这些错误说明"弹窗这条路走不通"，但跳转方式往往还能成 ——
-   典型是浏览器拦了弹窗、或者禁用了第三方 Cookie（Safari/Chrome 越来越多默认禁用）。 */
-const POPUP_FALLBACK_CODES = [
-  'auth/popup-blocked', 'auth/popup-blocked-by-browser',
-  'auth/operation-not-supported-in-this-environment',
-  'auth/web-storage-unsupported', 'auth/cancelled-popup-request'
-];
-function googleProvider(){
-  const pr = new firebase.auth.GoogleAuthProvider();
-  pr.setCustomParameters({ prompt: 'select_account' });
-  return pr;
-}
-async function signInWithGoogleRedirect(){
-  requireCloud();
-  try{ sessionStorage.setItem('nelc_google_redirect', '1'); }catch(e){}
-  await auth.signInWithRedirect(googleProvider());
-}
-
-async function signInWithGoogle(){
-  requireCloud();
-  let result;
-  try{
-    result = await auth.signInWithPopup(googleProvider());
-  }catch(err){
-    const code = err && err.code;
-    if(POPUP_FALLBACK_CODES.includes(code)){
-      // 弹窗走不通就整页跳转，跳回来后由 boot 里的 getRedirectResult 接手
-      await signInWithGoogleRedirect();
-      return new Promise(()=>{});     // 页面即将跳走，这里不再往下走
-    }
-    throw err;
-  }
-  /* 到这里 Google 登录已经成功了。下面全是 Firestore 操作 ——
-     数据库不通不该表现成"登录失败"，那会让人一直去查 Google 那边。 */
-  const uid = result.user.uid;
-  try{
-    const doc = await dbRetry(()=>db.collection('users').doc(uid).get());
-    if(doc.exists){ clearOffline(uid); return migrateProfile(doc.data()); }
-    const base = result.user.displayName || (result.user.email || 'student').split('@')[0];
-    const p = newProfile(await ensureUniqueUsername(base), uid);
-    p.email = result.user.email || null;
-    await saveProfile(p);
-    return await absorbGuestProgress(p);
-  }catch(err){
-    if(!isDbDown(err)) throw err;
-    const base = (result.user.email || 'student').split('@')[0];
-    const local = loadOffline(uid) || newProfile(base.replace(/[^a-z0-9_.-]/gi,'') || 'student', uid);
-    local.email = result.user.email || null;
-    local.offlineOnly = true;
-    saveOffline(local);
-    toast('登录成功，但数据库暂时连不上 —— 进度先存在这台设备上。');
-    return local;
-  }
-}
-
-/* 登录后按角色分流：教师账号直接进教师视图，不用单独的教师入口。
-   密码登录、Google 登录、刷新恢复都走这里，避免三处各写一遍。 */
 async function enterAppWithProfile(p){
-  const prof = migrateProfile(p);
+  const prof = migrateProfile({ ...newProfile(p.username, p.uid), ...p });
   state.profile = prof;
   state.fromGuest = false;
   if(isTeacherProfile(prof)){
@@ -2504,123 +2288,6 @@ async function enterAppWithProfile(p){
    "听不到声音"可能卡在很多环节：浏览器不支持、没装英语语音、没有用户手势解锁、
    系统静音、Safari 拦了自动播放。这里把每一步的真实状态查出来告诉用户，
    而不是笼统地说一句"朗读失败"。 */
-/* ---------- 登录自检 ----------
-   "登录失败"四个字没法排查。这里把每一环的真实状态查出来：
-   打开方式、域名授权、本地存储、以及真的去点一次 Google 登录看返回什么错误码。 */
-function openLoginCheck(){
-  const overlay = document.createElement('div');
-  overlay.className = 'overlay';
-  const close = ()=>overlay.remove();
-  overlay.onclick = e=>{ if(e.target === overlay) close(); };
-
-  const row = (st, text, hint)=>`
-    <div class="sc-row">
-      <span class="sc-dot sc-${st}"></span>
-      <div><div>${text}</div>${hint?`<div class="sc-hint">${hint}</div>`:''}</div>
-    </div>`;
-
-  const isFile = location.protocol === 'file:';
-  const host = location.hostname || '(无)';
-  const localHost = ['localhost','127.0.0.1'].includes(host);
-  let storageOk = true;
-  try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }catch(e){ storageOk = false; }
-  const cfgHost = (typeof firebaseConfig !== 'undefined' && firebaseConfig.authDomain) || '';
-
-  let html = '';
-  html += CLOUD_OK
-    ? row('ok', 'Firebase 已加载')
-    : row('bad', 'Firebase 没能加载', '脚本来自 gstatic.com，可能被网络拦截了。访客模式不受影响。');
-
-  html += isFile
-    ? row('bad', '当前是 file:// 直接打开的文件',
-          'Google 登录<b>不支持</b>这种打开方式（Firebase 不接受 file:// 来源）。<br>要用账号功能，必须通过网址访问 —— 部署到 Firebase Hosting 或 GitHub Pages 之后再试。')
-    : row('ok', `通过网址访问：${esc(location.origin)}`);
-
-  if(!isFile){
-    html += localHost
-      ? row('ok', 'localhost 默认已在 Firebase 授权列表里')
-      : row('warn', `域名 ${esc(host)} 需要在 Firebase 里授权`,
-            `Firebase 控制台 → Authentication → Settings → 已获授权的网域 → 添加 <code>${esc(host)}</code>。<br>没加会报 auth/unauthorized-domain。`);
-  }
-
-  html += storageOk
-    ? row('ok', '浏览器允许本地存储')
-    : row('bad', '浏览器禁用了本地存储 / Cookie',
-          '无痕模式或隐私设置会导致 Google 登录失败。可以改用用户名密码登录。');
-
-  html += row('warn', 'Google 登录需要在 Firebase 里先启用',
-    'Authentication → Sign-in method → Google → 启用 → 选一个「项目支持电子邮件」→ 保存。<br>没启用会报 auth/operation-not-allowed。');
-
-  html += `<div id="lcDb">${row('wait','正在测试数据库连接…')}</div>`;
-
-  html += `<div class="sc-raw">技术细节：protocol=${location.protocol} host=${esc(host)} authDomain=${esc(cfgHost)} cloud=${CLOUD_OK} storage=${storageOk}</div>`;
-
-  overlay.innerHTML = `
-    <div class="sheet" style="max-width:560px;">
-      <div class="sheet-head">
-        <h3 style="margin:0;">🔑 登录自检</h3>
-        <button class="btn-ghost" id="lcClose">关闭</button>
-      </div>
-      <div id="lcBody">${html}</div>
-      <div id="lcResult"></div>
-      <button class="btn btn-orange btn-block" id="lcTry" style="margin-top:14px;" ${(!CLOUD_OK||isFile)?'disabled':''}>
-        实际试一次 Google 登录
-      </button>
-      <p style="font-size:12px; color:var(--ink-soft); margin:10px 0 0;">
-        会真的弹出 Google 登录窗口。失败的话，这里会显示确切的错误码和对应的修复步骤。
-      </p>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector('#lcClose').onclick = close;
-
-  /* 单独测一次 Firestore。Auth 和 Firestore 是两套服务、两个域名，
-     Auth 通了不代表数据库也通 —— unavailable 就是这么来的。 */
-  (async ()=>{
-    const slot = overlay.querySelector('#lcDb');
-    if(!slot) return;
-    if(!CLOUD_OK){ slot.innerHTML = row('bad','数据库没法测试','Firebase 都没加载起来。'); return; }
-    try{
-      /* 探测用 usernames 集合：它的规则是 allow read: if true，未登录也能读。
-         不能用 __probe__ 这种名字 —— Firestore 里双下划线开头是保留前缀，
-         查询会直接返回 invalid-argument，自检就会误报"连不上"。 */
-      await Promise.race([
-        db.collection('usernames').limit(1).get(),
-        new Promise((_,rej)=>setTimeout(()=>rej({code:'deadline-exceeded'}), 8000))
-      ]);
-      slot.innerHTML = row('ok','Firestore 数据库连得上');
-    }catch(err){
-      const code = String((err && (err.code||err.message))||'').replace('firestore/','');
-      if(code === 'permission-denied'){
-        slot.innerHTML = row('ok','Firestore 连得上（探测被安全规则拒绝属正常）');
-      }else{
-        slot.innerHTML = row('bad', `Firestore 连不上：${esc(code)}`,
-          '这一步不通的话，即使 Google 登录成功也会卡住。常见原因：<br>'
-        + '① 这个 Firebase 项目<b>还没创建 Firestore 数据库</b> —— 控制台 → Firestore Database → 创建数据库；<br>'
-        + '② 网络或代理挡住了 firestore.googleapis.com（和 Auth 不是同一个域名，可能只挡住其中一个）；<br>'
-        + '③ 浏览器扩展拦截了请求。<br>'
-        + '本版已自动改用长轮询并重试三次，仍不通就说明是上面这几种。');
-      }
-    }
-  })();
-
-  const tryBtn = overlay.querySelector('#lcTry');
-  if(tryBtn) tryBtn.onclick = async ()=>{
-    const out = overlay.querySelector('#lcResult');
-    tryBtn.disabled = true; tryBtn.textContent = '正在打开 Google 登录…';
-    out.innerHTML = '';
-    try{
-      const p = await signInWithGoogle();
-      out.innerHTML = row('ok', `登录成功：${esc(p.username)}`, '说明配置没问题。');
-      setTimeout(async ()=>{ close(); await enterAppWithProfile(p); render(); }, 900);
-    }catch(err){
-      const code = (err && err.code) || '(无错误码)';
-      out.innerHTML = row('bad', `失败：${esc(code)}`, esc(friendlyAuthError(err)))
-        + `<div class="sc-raw">${esc((err && err.message) || '')}</div>`;
-      tryBtn.disabled = false; tryBtn.textContent = '再试一次';
-    }
-  };
-}
-
 function openSoundCheck(){
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
@@ -2907,162 +2574,88 @@ function renderTopbar(){
   };
   bar.querySelector('#logoutBtn').onclick = async ()=>{
     TTS.stop();
-    if(state.profile && state.profile.isGuest){
-      // 访客的数据只在这台设备上，退出前问清楚要不要留着
-      const keep = confirm('要保留这台设备上的访客练习记录吗？\n\n「确定」＝ 保留，下次打开还能接着练\n「取消」＝ 清空记录');
-      if(!keep) clearGuestProfile();
-    } else {
-      try{ if(CLOUD_OK) await auth.signOut(); }catch(e){}
+    if(state.profile && !state.profile.isGuest){
+      await progressWrites;
+      try{ await api('session/logout', {}); }
+      catch(error){ toast(error.message || '退出失败，请重试。'); return; }
     }
+    state.hw = null; state.hwDone = {}; state.dictResult = null; state.gramResult = null;
+    clearHwFromUrl();
     state.profile = null; state.screen = 'auth'; state.errorMsg = ''; state.fromGuest = false;
     render();
   };
   return bar;
 }
 
-/* =========================================================
-   登录 / 注册
-   ========================================================= */
 function renderAuth(){
   const wrap = document.createElement('div');
-  const isReg = state.authMode === 'register';
-  const savedGuest = loadGuestProfile();
-  const resumeStats = savedGuest ? statsOf(savedGuest) : null;
-  const resumeGuest = !!(savedGuest && (resumeStats.learned || (savedGuest.vocabTests||[]).length));
   wrap.innerHTML = `
-    <div class="hero">
-      <div class="eyebrow">NELC Vocabulary Lab</div>
-      <h1>把单词<em>听</em>进去，<em>写</em>出来</h1>
-      <p class="sub">${BAND_TOTAL.toLocaleString()} 词的 NELC 词表 · 听写练习 · 词汇量检测</p>
-    </div>
+    <div class="hero"><h1>NELC 词汇学院</h1></div>
     <div class="auth-wrap card">
-      ${state.fromGuest ? `<div class="rec-box" style="margin:0 0 18px;">注册一个账号，刚才练过的记录会自动并进去，换设备也能接着用，老师也能看到你的进度。</div>` : ''}
-      ${ACCOUNTS_ENABLED ? `
-      <div class="tabs">
-        <div class="tab ${isReg?'active':''}" data-mode="register">注册新账号</div>
-        <div class="tab ${!isReg?'active':''}" data-mode="login">登录</div>
-      </div>` : ''}
-      ${ACCOUNTS_ENABLED ? `
-      <div class="field">
-        <label class="field-label">${isReg ? '用户名' : '用户名或邮箱'}</label>
-        <input type="text" id="uname" placeholder="${isReg?'字母或数字，例如 amy2026':'用户名，或注册时填的邮箱'}" autocomplete="username">
-      </div>
-      <div class="field">
-        <label class="field-label">密码</label>
-        <input type="password" id="pword" placeholder="至少 6 位" autocomplete="${isReg?'new-password':'current-password'}">
-      </div>
-      ${isReg ? `
-      <div class="field">
-        <label class="field-label">邮箱<span class="req-tag">必填</span></label>
-        <input type="email" id="remail" placeholder="真实可用的邮箱，忘记密码时靠它找回" autocomplete="email">
-      </div>` : ''}
-      ${!isReg ? `<div class="field" style="margin-top:-8px;">
-        <button class="linkbtn" id="forgotBtn">忘记密码？</button>
-      </div>` : ''}` : ''}
-      ${state.errorMsg ? `<div class="error-text">${esc(state.errorMsg)}</div>` : ''}
-      ${ACCOUNTS_ENABLED ? `
-      <button class="btn btn-primary btn-block" id="authSubmit" ${CLOUD_OK?'':'disabled'}>${isReg?'注册并开始检测':'登录'}</button>
-      <div class="divider">或</div>
-      <button class="btn-google" id="googleBtn" ${CLOUD_OK?'':'disabled'}>
-        <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:10px;"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.7 30.2.5 24 .5 14.6.5 6.5 5.9 2.6 13.7l7.8 6.1C12.3 13.9 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.2c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C1 16.1 0 19.9 0 23.5s1 7.4 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 47c6.2 0 11.5-2 15.3-5.6l-7.5-5.8c-2.1 1.4-4.8 2.2-7.8 2.2-6.4 0-11.7-4.3-13.6-10.2l-7.8 6.1C6.5 41.6 14.6 47 24 47z"/></svg>
-        使用 Google 账号${isReg?'注册':'登录'}
-      </button>` : ''}
-      <div class="divider">${ACCOUNTS_ENABLED ? '不想注册？' : '开始练习'}</div>
-      <button class="btn btn-outline btn-block" id="guestBtn">
-        ${resumeGuest ? '继续上次的访客练习 →' : '直接开始练，不用注册 →'}
-      </button>
-      <button class="btn-ghost btn-block" id="hwCodeAuth" style="margin-top:10px;">📋 我有作业码</button>
-      ${resumeGuest ? `<p class="guest-resume">这台设备上有访客记录：学过 ${resumeStats.learned} 个词${resumeStats.dSeen?` · 听写 ${resumeStats.dOk}/${resumeStats.dSeen}`:''}</p>` : ''}
-
-      ${ACCOUNTS_ENABLED ? `
-      <button class="btn-ghost btn-block" id="loginCheck" style="margin-top:10px;">🔑 登录有问题？点这里自检</button>` : ''}
-      <div class="index-note">
-        ${CLOUD_OK ? '' : (ACCOUNTS_ENABLED
-          ? '<b>现在连不上服务器</b>，注册和登录暂时用不了 —— 但访客模式完全不需要联网，可以照常背单词和听写。<br><br>'
-          : '<b>账号功能还没开通</b>，目前用访客模式练习 —— 词汇量检测、听写、单词本全都能用，进度存在这台设备上。<br><br>')}
-        <b>访客模式</b>能用全部功能（词汇量检测、听写、单词本），进度存在这台设备上，<b>换设备或清浏览器数据就没了</b>。
-        ${ACCOUNTS_ENABLED
-          ? '随时可以注册，练过的记录会自动并进新账号。用户名随便起一个能记住的就行；邮箱要填真实可用的 —— 忘记密码时只能靠它找回。<br><br>'
-            + '<b>老师</b>：直接用教师账号在上面登录即可，会自动进入教师视图，不用另找入口。'
-          : '以后开通账号功能时，这台设备上练过的记录可以并进新账号。'}
-      </div>
+      ${state.errorMsg ? `<p class="error-text">${esc(state.errorMsg)}</p>` : ''}
+      ${TEACHER_MODE ? `
+        <form id="teacherLogin">
+          <label class="field-label" for="teacherName">教师用户名或邮箱</label>
+          <input id="teacherName" autocomplete="username" required>
+          <label class="field-label" for="teacherPassword">密码</label>
+          <input id="teacherPassword" type="password" autocomplete="current-password" required>
+          <button class="btn btn-primary btn-block" ${CLOUD_OK ? '' : 'disabled'}>教师登录</button>
+          <button class="btn-ghost" type="button" id="teacherGoogle" ${CLOUD_OK ? '' : 'disabled'}>使用 Google 登录</button>
+          <button class="btn-ghost" type="button" id="teacherReset" ${CLOUD_OK ? '' : 'disabled'}>重置密码</button>
+        </form>
+        <a href="/vocab/">返回练习</a>
+      ` : `
+        <p>学生请在微信中打开老师私发的专属登录链接。登录后，群里的普通作业链接会使用你的账号。</p>
+        <button class="btn btn-primary btn-block" id="guestBtn">以游客身份练习</button>
+        <p class="hw-note">游客可当场查看分数和答案，关闭页面后不保留记录。</p>
+        <button class="btn-ghost btn-block" id="hwCodeAuth">我有作业码</button>
+        <a href="/vocab/?teacher=1">教师登录</a>
+      `}
     </div>`;
-
-  wrap.querySelectorAll('.tab').forEach(t=>{
-    t.onclick = ()=>{ state.authMode = t.dataset.mode; state.errorMsg = ''; render(); };
-  });
-  wrap.querySelector('#hwCodeAuth').onclick = promptHomeworkCode;
-  // 账号功能关掉时这些元素根本不存在，绑定前都要先判空
-  const on = (sel, fn)=>{ const el = wrap.querySelector(sel); if(el) el.onclick = fn; };
-
-  const submit = async ()=>{
-    const u = wrap.querySelector('#uname').value.trim();
-    const pw = wrap.querySelector('#pword').value;
-    const rm = wrap.querySelector('#remail') ? wrap.querySelector('#remail').value.trim() : '';
-    if(!u || !pw){ state.errorMsg = '请填写用户名和密码。'; render(); return; }
-    if(isReg && pw.length < 6){ state.errorMsg = '密码至少 6 位。'; render(); return; }
-    // 邮箱必填：没有它就没法重置密码，学生只能换个用户名重新注册，记录全丢
-    if(isReg && !rm){ state.errorMsg = '请填写邮箱 —— 忘记密码时要靠它找回。'; render(); return; }
-    if(isReg && !isRealEmail(rm)){ state.errorMsg = '邮箱格式不太对，检查一下。'; render(); return; }
-    const btn = wrap.querySelector('#authSubmit');
-    btn.disabled = true; btn.textContent = '处理中…';
+  const form = wrap.querySelector('#teacherLogin');
+  if(form) form.onsubmit = async event=>{
+    event.preventDefault();
+    const button = form.querySelector('button');
+    button.disabled = true;
     try{
-      const p = isReg ? await registerUser(u, pw, rm) : await loginUser(u, pw);
-      state.errorMsg = '';
-      await enterAppWithProfile(p);
-      render();
-    }catch(err){
-      state.errorMsg = friendlyAuthError(err);
-      render();
-    }
+      const email = await resolveLoginEmail(form.querySelector('#teacherName').value.trim());
+      const credentials = await auth.signInWithEmailAndPassword(email, form.querySelector('#teacherPassword').value);
+      await signInTeacher(credentials.user);
+    }catch(error){ state.errorMsg = friendlyAuthError(error); }
+    render();
   };
-  on('#authSubmit', submit);
-  const pw = wrap.querySelector('#pword');
-  if(pw) pw.onkeydown = e=>{ if(e.key === 'Enter') submit(); };
-
-  on('#googleBtn', async ()=>{
-    const g = wrap.querySelector('#googleBtn');
-    g.disabled = true; g.textContent = '正在打开 Google 登录…';
-    try{
-      const p = await signInWithGoogle();
-      state.errorMsg = '';
-      await enterAppWithProfile(p);
+  if(form){
+    const google = form.querySelector('#teacherGoogle');
+    google.onclick = async ()=>{
+      google.disabled = true;
+      try{
+        const result = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        await signInTeacher(result.user);
+      }catch(error){ state.errorMsg = friendlyAuthError(error); }
       render();
-    }catch(err){
-      state.errorMsg = friendlyAuthError(err);
-      render();
-    }
-  });
-  wrap.querySelector('#guestBtn').onclick = ()=>{
+    };
+    form.querySelector('#teacherReset').onclick = async ()=>{
+      const login = form.querySelector('#teacherName').value.trim();
+      if(!login){ toast('请先输入教师用户名或邮箱。'); return; }
+      try{
+        const email = await resolveLoginEmail(login);
+        if(email.endsWith(FAKE_DOMAIN)){ toast('该账号没有绑定邮箱，请联系管理员。'); return; }
+        await auth.sendPasswordResetEmail(email);
+        toast('如果邮箱已绑定教师账号，请查收重置邮件。');
+      }catch(error){ toast(friendlyAuthError(error)); }
+    };
+  }
+  const guest = wrap.querySelector('#guestBtn');
+  if(guest) guest.onclick = async ()=>{
     state.errorMsg = '';
-    const p = (resumeGuest ? savedGuest : null) || newGuestProfile();
-    p.isGuest = true;
-    saveGuestProfile(p);
-    setGuestActive(true);
-    enterAppWithProfile(p);
+    await enterAppWithProfile(newGuestProfile());
     render();
   };
-  on('#loginCheck', openLoginCheck);
-  on('#forgotBtn', async ()=>{
-    const u = wrap.querySelector('#uname').value.trim();
-    if(!u){ state.errorMsg = '先在上面填一下用户名或邮箱，再点忘记密码。'; render(); return; }
-    const btn = wrap.querySelector('#forgotBtn');
-    btn.disabled = true; btn.textContent = '发送中…';
-    try{
-      const to = await sendPasswordReset(u);
-      state.errorMsg = '';
-      toast('重置邮件已发往 ' + to + '，查收一下（可能在垃圾箱）。');
-    }catch(err){
-      state.errorMsg = friendlyAuthError(err);
-    }
-    render();
-  });
+  const code = wrap.querySelector('#hwCodeAuth');
+  if(code) code.onclick = promptHomeworkCode;
   return wrap;
 }
 
-/* =========================================================
-   欢迎页（尚未检测过的新用户）
-   ========================================================= */
 function renderWelcome(){
   const wrap = document.createElement('div');
   wrap.innerHTML = `
@@ -3613,21 +3206,12 @@ function renderDashboard(){
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-    ${(needsRecoveryEmail(p) && CLOUD_OK) ? `
-      <div class="guest-banner">
-        <div>
-          <b>这个账号还没绑定邮箱</b>
-          <span>一旦忘记密码就没办法找回了 —— Firebase 的重置邮件只能发到账号绑定的邮箱。
-                绑一个就好。</span>
-        </div>
-        <button class="btn btn-orange" id="bindEmail">绑定邮箱</button>
-      </div>` : ''}
     ${p.offlineOnly ? `
       <div class="guest-banner">
         <div>
           <b>数据库暂时连不上</b>
-          <span>你已经登录成功了，但云端数据库没通，进度先存在这台设备上。
-                网络恢复后会自动同步 —— 在此期间别清空浏览器数据。</span>
+          <span>本次进度还没有保存。
+                请在当前页面重试同步。</span>
         </div>
         <button class="btn btn-orange" id="retrySync">重试同步</button>
       </div>` : ''}
@@ -3635,10 +3219,8 @@ function renderDashboard(){
       <div class="guest-banner">
         <div>
           <b>你正在用访客模式</b>
-          <span>进度只存在这台设备上，换设备或清空浏览器数据就会丢失${ACCOUNTS_ENABLED?'，老师也看不到你的记录':''}。${
-            ACCOUNTS_ENABLED?'':'（账号功能还没开通，开通后可以把记录并进账号。）'}</span>
+          <span>关闭页面后不保留练习记录，老师也不会收到成绩。</span>
         </div>
-        ${ACCOUNTS_ENABLED ? '<button class="btn btn-orange" id="bannerSave">注册保存进度</button>' : ''}
       </div>` : ''}
     <div class="stat-row">
       <div class="stat"><div class="num">${p.vocabSize ? p.vocabSize.toLocaleString() : '—'}</div><div class="lbl">预估词汇量</div></div>
@@ -3728,31 +3310,14 @@ function renderDashboard(){
   const tf = wrap.querySelector('#tipFootBtn');
   if(tf) tf.onclick = openTipSheet;
 
-  const be = wrap.querySelector('#bindEmail');
-  if(be) be.onclick = async ()=>{
-    const v = prompt('填一个能收到邮件的邮箱：\n\n绑定后，忘记密码时就能收到重置邮件。');
-    if(v === null) return;
-    if(!isRealEmail(v)){ toast('邮箱格式不太对，再检查一下。'); return; }
-    try{
-      const got = await attachRecoveryEmail(v);
-      toast('已绑定 ' + got + '，以后可以用它找回密码。');
-      render();
-    }catch(err){
-      toast(friendlyAuthError(err));
-    }
-  };
-
   const rs = wrap.querySelector('#retrySync');
   if(rs) rs.onclick = async ()=>{
     rs.disabled = true; rs.textContent = '同步中…';
     dbDownWarned = false;
     await saveProfile(p);
     if(!p.offlineOnly) toast('同步成功');
-    else toast('还是连不上：' + (DB_LAST_ERROR || 'unavailable'));
     render();
   };
-  const bs = wrap.querySelector('#bannerSave');
-  if(bs) bs.onclick = ()=>{ state.authMode = 'register'; state.fromGuest = true; state.screen = 'auth'; render(); };
   const tb = wrap.querySelector('#trickyBtn');
   if(tb) tb.onclick = ()=>{
     state.dictCfg = { ...state.dictCfg, scope:'tricky' };
@@ -4280,7 +3845,8 @@ function renderDictRun(){
   wrap.querySelector('#quitBtn').onclick = ()=>{
     TTS.stop();
     clearTimeout(d.autoTimer);
-    if(d.results.length) finishDictation();
+    if(d.hw){ state.screen = 'hwIntro'; render(); }
+    else if(d.results.length) finishDictation();
     else { state.screen = 'dictSetup'; render(); }
   };
   // 卡片单独重绘，避免整页 render 打断输入框
@@ -4581,23 +4147,8 @@ async function finishDictation(){
   await saveProfile(p);
   state.screen = 'dictResult';
 
-  /* 作业要交到云端。交失败不能把学生挡在结果页外面 —— 练习本身已经记进档案了，
-     这里丢的只是"老师能看到"这一层，所以先存本地，下次打开再补交。 */
-  if(d.hw){
-    state.hwSubmitState = 'sending';
-    render();
-    const sub = buildSubmission(state.hw || { code: d.hw.code }, entry, d.results, d.hw.name, p);
-    try{
-      await writeSubmission(sub);
-      state.hwSubmitState = 'ok';
-      state.hwDone = { ...(state.hwDone||{}), [sub.code]: { correct: sub.correct, total: sub.total } };
-    }catch(err){
-      stashPendingHw(sub);
-      state.hwSubmitState = 'pending';
-      console.warn('作业提交失败，已暂存本地：', err);
-    }
-    render();
-  } else {
+  if(d.hw && !p.isGuest) await submitHomework(d.hw.code, entry, d.results, p);
+  else{
     state.hwSubmitState = null;
     render();
   }
@@ -4609,9 +4160,11 @@ function renderDictResult(){
   const r = state.dictResult;
   const rate = pct(r.correct, r.total);
   const wrongs = r.results.filter(x=>!x.correct);
-  const hwBanner = !r.hw ? '' : (
+  const hwBanner = !r.hw ? '' : state.profile.isGuest
+    ? '<div class="rec-box">游客练习 · 结果仅在当前页面显示。</div>' : (
       state.hwSubmitState === 'sending' ? `<div class="rec-box" style="margin:0 0 16px;">正在把成绩交给老师…</div>`
     : state.hwSubmitState === 'pending' ? `<div class="warn-box" style="margin:0 0 16px;"><b>成绩还没交上去</b> —— 网络没通。先别清浏览器数据，下次打开这个网页会自动补交。</div>`
+    : state.hwSubmitState === 'failed' ? '<div class="warn-box">成绩未提交，请重新打开作业。</div>'
     : `<div class="rec-box" style="margin:0 0 16px;">✅ 已提交给${esc((state.hw&&state.hw.teacherName)||'老师')} —— 作业「${esc(r.hw.title||r.hw.code)}」，${r.correct}/${r.total}。</div>`);
   const wrap = document.createElement('div');
   wrap.innerHTML = `
@@ -4662,11 +4215,12 @@ function renderDictResult(){
   };
   wrap.querySelector('#again').onclick = ()=>{
     if(r.hw && state.hw){ startHomework(state.hw); return; }   // 重做会覆盖上次的成绩
-    state.screen = 'dictSetup'; render();
+    state.screen = state.profile.sid ? 'dictSetup' : 'welcome'; render();
   };
   wrap.querySelector('#home').onclick = ()=>{
     state.hw = null; state.hwSubmitState = null;
-    state.screen = 'dashboard'; render();
+    clearHwFromUrl();
+    state.screen = state.profile.sid ? 'dashboard' : 'welcome'; render();
   };
   return wrap;
 }
@@ -4849,16 +4403,15 @@ function hasPro(p){
   const u = p && p.planUntil;
   return !!(p && p.plan === 'pro' && (!u || u >= todayStr()));
 }
-function needsRecoveryEmail(p){
-  return !!p && !p.isGuest && !isRealEmail(p.email);
-}
-
 async function loadTeacherStudents(){
   state.teacherStudents = [];
   if(!CLOUD_OK){ toast('连不上服务器，无法读取学生数据。'); return; }
   try{
     const snap = await dbRetry(()=>db.collection('users').get());
-    state.teacherStudents = snap.docs.map(d=>migrateProfile(d.data()))
+    state.teacherStudents = snap.docs.map(d=>{
+      const data = d.data();
+      return migrateProfile({ ...newProfile(data.username, d.id), ...data, uid: d.id });
+    })
       .filter(p=>!isTeacherProfile(p))            // 教师账号不混进学生名单
       .sort((a,b)=>String(a.username).localeCompare(String(b.username)));
   }catch(e){
@@ -4968,6 +4521,7 @@ function renderTeacherList(){
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
         <h2 style="margin:0;">教师视图 · 全部学生 (${state.teacherStudents.length})</h2>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="newStudent">新建学生账号</button>
           <button class="btn btn-orange" id="hwBtn">📋 作业</button>
           <button class="btn-ghost" id="importBtn">📥 导入词汇书</button>
           <button class="btn-ghost" id="csvBtn">⬇️ 导出 CSV</button>
@@ -4977,7 +4531,7 @@ function renderTeacherList(){
       <p style="color:var(--ink-soft); font-size:13.5px;">点击学生查看完整报告（已学单词、易错词、听写明细、词汇量变化）。</p>
       ${state.teacherStudents.length
         ? `<div class="teacher-list">${rows}</div>`
-        : `<p style="color:var(--ink-soft); margin-top:20px;">还没有学生注册。</p>`}
+        : `<p style="color:var(--ink-soft); margin-top:20px;">还没有学生账号。</p>`}
 
       ${state.teacherStudents.length ? renderRanking() : ''}
 
@@ -4997,6 +4551,15 @@ function renderTeacherList(){
     </div>`;
 
   wireSpeak(wrap);
+  wrap.querySelector('#newStudent').onclick = async ()=>{
+    const nickname = prompt('输入学生昵称');
+    if(!nickname?.trim()) return;
+    const button = wrap.querySelector('#newStudent');
+    button.disabled = true;
+    await issueStudentLink({ nickname });
+    await loadTeacherStudents();
+    render();
+  };
   const openStudent = uid=>{
     state.teacherSelected = state.teacherStudents.find(p=>(p.uid||p.username) === uid);
     state.screen = 'teacherDetail';
@@ -5021,15 +4584,55 @@ function renderTeacherList(){
 function renderTeacherDetail(){
   const p = state.teacherSelected;
   const st = statsOf(p);
-  return renderNotebookView(p, {
+  const view = renderNotebookView(p, {
     title: `${p.username} 的学习报告`,
     subtitle: `${p.placementDetail || '尚未定级'} · 连续学习 ${p.streak||0} 天 · 拼写 ${st.dOk}/${st.dSeen} · 认词 ${st.cOk}/${st.cSeen}`,
     backLabel: '← 返回学生列表',
-    extraBtn: `<button class="btn-ghost" id="nbExtra">⬇️ 导出这名学生</button>`,
+    extraBtn: `<button class="btn-ghost" id="nbExtra">⬇️ 导出这名学生</button><button class="btn btn-primary" id="newStudentLink">生成新登录链接</button>`,
     onExtra: exportStudentCsv,
     onBack: ()=>{ state.screen = 'teacherList'; render(); }
   });
+  const assignments = document.createElement('section');
+  assignments.className = 'card';
+  assignments.innerHTML = '<h3>作业记录</h3><p role="status">正在读取…</p>';
+  view.append(assignments);
+  const status = assignments.querySelector('[role="status"]');
+  loadStudentAssignments(p.uid).then(records=>{
+    status.textContent = records.length ? '' : '暂无作业提交。';
+    for(const record of records){
+      const row = document.createElement('p');
+      row.textContent = record.title + ' · ' + record.correct + '/' + record.total + ' · ' +
+        new Date(record.submittedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Singapore' });
+      assignments.append(row);
+    }
+  }).catch(()=>{ status.textContent = '无法读取作业记录，请返回列表后重试。'; });
+  view.querySelector('#newStudentLink').onclick = async event=>{
+    if(!confirm('生成新链接后，这名学生需要用新链接登录。继续吗？')) return;
+    event.currentTarget.disabled = true;
+    await issueStudentLink({ uid: p.uid });
+    render();
+  };
+  return view;
 }
+
+async function loadStudentAssignments(uid){
+  const assignments = await listAssignments(state.teacherProfile.uid);
+  const records = await Promise.all(assignments.map(async a=>{
+    const doc = await dbRetry(()=>db.collection(HW_COL).doc(a.code).collection('submissions').doc(uid).get());
+    return doc.exists ? { ...doc.data(), title: a.title || a.code } : null;
+  }));
+  return records.filter(record=>record && !record.isGuest)
+    .sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt)));
+}
+
+async function issueStudentLink(payload){
+  try{
+    const token = await auth.currentUser.getIdToken();
+    const { link } = await api('teacher/link', payload, token);
+    prompt('请复制并在微信私聊发给该学生。链接只能使用一次，7 天后过期。', link);
+  }catch(error){ toast(error.message || '生成链接失败，请重试。'); }
+}
+
 
 /* =========================================================
    作业
@@ -5039,10 +4642,9 @@ function renderTeacherDetail(){
    设计上的三个取舍：
    1. 题目在「布置的那一刻」就抽好、整份存进 assignments 文档 ——
       不能存"范围+题量"让学生端临时抽，否则每人题目不同，分数没法比。
-   2. 不登录也能做（名字自己填）。她的学生很多不会专门注册，
-      要求注册会直接把交作业率打下去。老师可以逐份作业改成"必须登录"。
+   2. 游客可以完成同一作业，练习结果只在当前页面显示。
    3. 一个学生一份提交（文档 ID 就是 uid），重做覆盖旧的，
-      老师名单里不会出现同一个人好几行。访客的提交用随机 ID，各算各的。
+      老师名单里每人显示一行。
    ========================================================= */
 
 // 去掉 I/1/O/0 这些手抄容易认错的字符 —— 作业码经常是口头念或手写给学生的
@@ -5057,8 +4659,7 @@ function newHwCode(){
 function cleanHwCode(v){ return String(v||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); }
 
 function hwLink(code){
-  const base = location.origin + location.pathname;
-  return base + '#hw=' + code;
+  return new URL('/vocab/?hw=' + code, location.origin).href;
 }
 // 链接可能被微信/QQ 改写，所以 hash 和 query 两种都认
 function readHwCodeFromUrl(){
@@ -5072,11 +4673,13 @@ function readHwCodeFromUrl(){
   return '';
 }
 function clearHwFromUrl(){
-  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  try{ const url = new URL(location.href); url.searchParams.delete('hw');
+    url.hash = ''; history.replaceState(null, '', url); }catch(e){}
 }
 
 const HW_COL = 'assignments';
 async function fetchAssignment(code){
+  if(!TEACHER_MODE) return api('assignments/' + code);
   requireCloud();
   const snap = await dbRetry(()=>db.collection(HW_COL).doc(code).get());
   return snap.exists ? snap.data() : null;
@@ -5114,7 +4717,7 @@ function newerThan(a, b){
 async function loadSubmissions(code){
   requireCloud();
   const snap = await dbRetry(()=>db.collection(HW_COL).doc(code).collection('submissions').get());
-  const all = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  const all = snap.docs.map(d=>({ id:d.id, ...d.data() })).filter(s=>s.uid && !s.isGuest);
   // 同一个人可能交了好几次（访客重做）：按人合并，只留最后一次，并记下交了几次
   const byPerson = {};
   all.forEach(sb=>{
@@ -5130,68 +4733,45 @@ async function loadSubmissions(code){
     .sort((a,b)=>(b.correct/Math.max(1,b.total)) - (a.correct/Math.max(1,a.total)));
 }
 
-/* 提交。即使云端写失败也不把学生卡住 —— 本地先存一份，
-   练习本身已经记进档案了，丢的只是"老师能看到"这一层。 */
-const HW_PENDING_KEY = 'nelc_hw_pending';
-function stashPendingHw(sub){
+const HW_PENDING_KEY = uid=>'nelc_hw_pending_' + uid;
+function pendingHw(uid){
+  try{ return JSON.parse(localStorage.getItem(HW_PENDING_KEY(uid)) || '[]'); }
+  catch{ return []; }
+}
+function storePendingHw(uid, list){
   try{
-    const all = JSON.parse(localStorage.getItem(HW_PENDING_KEY) || '[]');
-    all.push(sub);
-    localStorage.setItem(HW_PENDING_KEY, JSON.stringify(all.slice(-20)));
-  }catch(e){}
+    if(list.length) localStorage.setItem(HW_PENDING_KEY(uid), JSON.stringify(list));
+    else localStorage.removeItem(HW_PENDING_KEY(uid));
+    return true;
+  }catch{ return false; }
 }
-async function flushPendingHw(){
-  let all = [];
-  try{ all = JSON.parse(localStorage.getItem(HW_PENDING_KEY) || '[]'); }catch(e){ return; }
-  if(!all.length || !CLOUD_OK) return;
-  const left = [];
-  for(const s of all){
-    try{ await writeSubmission(s); }catch(e){ left.push(s); }
+async function flushPendingHw(uid){
+  for(const sub of pendingHw(uid)){
+    try{ await writeSubmission(sub); }
+    catch(error){ if(![400, 404].includes(error.status)) return; }
+    storePendingHw(uid, pendingHw(uid).filter(item=>item.attemptId !== sub.attemptId));
   }
-  try{ localStorage.setItem(HW_PENDING_KEY, JSON.stringify(left)); }catch(e){}
 }
-
-/* 访客每次提交都用一个新 ID。
-   本来想让访客复用同一个 ID、重做时覆盖，但安全规则没办法验证"这份确实是你交的"
-   —— 复用 ID 就等于允许任何人改任何一份访客提交。所以规则里访客只能 create，
-   重做就多一条记录，由教师视图按名字合并、只显示最后一次。 */
-function newGuestSubId(){
-  return 'g' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-5);
+function writeSubmission(sub){
+  return api('assignments/' + sub.code, sub);
 }
-/* 第几次做这份作业。本来只按提交时间排"最后一次"，但时间戳只精确到毫秒，
-   同一毫秒内的两次提交分不出先后，合并时就可能把旧成绩当成最新的。
-   这个计数器存在本机，重做的场景（同一台设备同一个人）正好覆盖得住。 */
-const HW_ATTEMPT_KEY = code=>'nelc_hw_try_' + code;
-function nextHwAttempt(code){
-  let n = 0;
-  try{ n = parseInt(localStorage.getItem(HW_ATTEMPT_KEY(code)) || '0', 10) || 0; }catch(e){}
-  n += 1;
-  try{ localStorage.setItem(HW_ATTEMPT_KEY(code), String(n)); }catch(e){}
-  return n;
-}
-async function writeSubmission(sub){
-  requireCloud();
-  await dbRetry(()=>db.collection(HW_COL).doc(sub.code).collection('submissions').doc(sub.subId).set(sub));
-}
-function buildSubmission(a, entry, results, name, p){
-  const signedIn = !!(p && p.uid && p.uid !== 'guest' && !p.isGuest);
-  return {
-    code: a.code,
-    subId: signedIn ? p.uid : newGuestSubId(),
-    uid: signedIn ? p.uid : null,
-    name: String(name || (p && p.username) || '匿名').slice(0, 40),
-    isGuest: !signedIn,
-    total: entry.total, correct: entry.correct, secs: entry.secs,
-    // 只存判卷需要的字段，别把整个词条塞进去（一份作业几十题，文档会很大）
-    results: results.slice(0, 200).map(r=>({
-      w: String(r.w||'').slice(0,40),
-      input: String(r.input==null?'':r.input).slice(0,60),
-      correct: !!r.correct,
-      kind: r.kind === 'choice' ? 'choice' : 'spell'
-    })),
-    attempt: nextHwAttempt(a.code),
-    submittedAt: new Date().toISOString()
+async function submitHomework(code, entry, results, p){
+  state.hwSubmitState = 'sending';
+  render();
+  const sub = {
+    code, uid: p.uid, secs: entry.secs, attemptId: crypto.randomUUID(),
+    results: results.map(({ w, input, correct, kind })=>({ w, input, correct, kind }))
   };
+  try{
+    await writeSubmission(sub);
+    state.hwSubmitState = 'ok';
+    state.hwDone = { ...state.hwDone, [code]: { correct: entry.correct, total: entry.total } };
+  }catch(error){
+    const retryable = !error.status || error.status === 401 || error.status >= 500;
+    state.hwSubmitState = retryable && storePendingHw(p.uid, [...pendingHw(p.uid), sub]) ? 'pending' : 'failed';
+    if(state.hwSubmitState === 'failed') toast(error.message || '提交失败，请重新打开作业。');
+  }
+  render();
 }
 
 /* =========================================================
@@ -6306,8 +5886,6 @@ function gramSet(gid){ return GRAM_BANK.find(g=>g.id === gid) || GRAM_BANK[0]; }
 
 /* ---------- 学生端：答题 ---------- */
 function startGrammar(a, solo){
-  const p = state.profile;
-  const name = (p && !p.isGuest) ? p.username : (state.hwName || '').trim();
   state.gram = {
     queue: shuffle((a.items || []).slice()),
     idx: 0,
@@ -6317,7 +5895,7 @@ function startGrammar(a, solo){
     startedAt: Date.now(),
     label: a.title || a.code,
     // 自己练着玩的不算作业，不往 submissions 里写
-    hw: solo ? null : { code: a.code, title: a.title, name },
+    hw: solo ? null : { code: a.code, title: a.title },
     solo: !!solo
   };
   state.screen = 'gramRun';
@@ -6816,7 +6394,7 @@ function renderGramRun(){
       : '现在结束的话，这次的答题不会交给老师。确定吗？';
     if(!confirm(msg)) return;
     state.gram = null;
-    state.screen = state.profile ? (g.solo ? 'gramHome' : 'dashboard') : 'auth';
+    state.screen = g.solo ? 'gramHome' : 'hwIntro';
     render();
   };
 
@@ -6866,20 +6444,8 @@ async function finishGrammar(){
   state.gramResult = { ...entry, results: g.results, hw: g.hw };
   state.screen = 'gramResult';
 
-  if(g.hw){
-    state.hwSubmitState = 'sending';
-    render();
-    const sub = buildSubmission(state.hw || { code: g.hw.code }, entry, flat, g.hw.name, p);
-    try{
-      await writeSubmission(sub);
-      state.hwSubmitState = 'ok';
-      state.hwDone = { ...(state.hwDone || {}), [sub.code]: { correct: sub.correct, total: sub.total } };
-    }catch(err){
-      stashPendingHw(sub);
-      state.hwSubmitState = 'pending';
-      console.warn('语法作业提交失败，已暂存本地：', err);
-    }
-  }
+  if(g.hw && p && !p.isGuest) await submitHomework(g.hw.code, entry, flat, p);
+  else state.hwSubmitState = null;
   render();
 }
 
@@ -6896,7 +6462,9 @@ function renderGramResult(){
       <p class="sub">${esc(r.label)} · 正确率 ${rate}% · 用时 ${Math.round(r.secs / 60)} 分钟</p>
     </div>
     ${r.hw ? `<div class="card">${
-      state.hwSubmitState === 'sending' ? '<p style="margin:0; color:var(--ink-soft);">正在交给老师…</p>'
+      state.profile.isGuest ? '<div class="rec-box">游客练习 · 结果仅在当前页面显示。</div>'
+      : state.hwSubmitState === 'failed' ? '<div class="warn-box">成绩未提交，请重新打开作业。</div>'
+      : state.hwSubmitState === 'sending' ? '<p style="margin:0; color:var(--ink-soft);">正在交给老师…</p>'
       : state.hwSubmitState === 'pending' ? '<div class="warn-box" style="margin:0;">网络没通，成绩先存在这台设备上了，下次打开会自动补交。</div>'
       : '<div class="rec-box" style="margin:0;">已经交给老师了。</div>'}</div>` : ''}
     ${wrongItems.length ? `
@@ -6924,7 +6492,7 @@ function renderGramResult(){
   wrap.querySelector('#gDone').onclick = ()=>{
     const back = solo ? 'gramHome' : 'dashboard';
     state.gram = null; state.gramResult = null; clearHwFromUrl();
-    state.screen = state.profile ? back : 'auth';
+    state.screen = state.profile ? (state.profile.sid ? back : 'welcome') : 'auth';
     render();
   };
   return wrap;
@@ -6958,7 +6526,6 @@ function renderHwIntro(){
   const typeLabel = isGram ? '📝 语法练习' : ((DICT_MODES[a.mode] ? DICT_MODES[a.mode].icon + ' ' + DICT_MODES[a.mode].label : a.mode));
   const typeDesc = isGram ? '按语法点出的填空、选择和改错题，每个空单独算分。' : (DICT_MODES[a.mode] ? DICT_MODES[a.mode].desc : '');
   const overdue = a.due && todayStr() > a.due;
-  const needLogin = a.requireLogin && (!p || p.isGuest);
   const already = state.hwDone && state.hwDone[a.code];
   const wrap = document.createElement('div');
   wrap.innerHTML = `
@@ -6980,52 +6547,30 @@ function renderHwIntro(){
       ${overdue ? `<div class="warn-box">已经过了截止日期（${esc(a.due)}）—— 还是可以做，但老师那边会显示迟交。</div>` : ''}
       ${already ? `<div class="rec-box">你已经交过一次了（${already.correct}/${already.total}）。再做一次会覆盖上次的成绩。</div>` : ''}
 
-      ${needLogin ? `
-        <div class="warn-box">这份作业要求登录后提交，老师才能确认是谁做的。请先登录或注册。</div>
-        <button class="btn btn-primary btn-block" id="hwLogin">去登录 / 注册</button>
-      ` : `
-        ${(!p || p.isGuest) ? `
-          <div class="field" style="margin-top:18px;">
-            <label class="field-label">你的名字<span class="opt-tag">老师按这个认人</span></label>
-            <input type="text" id="hwName" placeholder="写上课用的名字，例如 林小雨" value="${esc(state.hwName||'')}" maxlength="20">
-          </div>` : `
-          <p class="hw-asname">将以 <b>${esc(p.username)}</b> 的身份提交。</p>`}
-        <button class="btn btn-orange btn-block" id="hwStart" ${a.open?'':'disabled'}>开始作业 →</button>
-        ${(!p || p.isGuest) ? `<p class="hw-note">不用注册也能交。想让进度长期保存、换设备也能看，可以之后再注册。</p>` : ''}
-      `}
+      <p class="hw-asname">${p && !p.isGuest
+        ? `成绩将记到 <b>${esc(p.username)}</b> 的账号。`
+        : '游客可当场查看分数和答案。需要老师查看成绩时，请先打开老师私发的登录链接。'}</p>
+      <button class="btn btn-orange btn-block" id="hwStart" ${a.open?'':'disabled'}>开始作业 →</button>
       <button class="btn-ghost btn-block" id="hwSkip" style="margin-top:12px;">先不做，去自由练习</button>
     </div>`;
 
-  const nameEl = wrap.querySelector('#hwName');
-  if(nameEl) nameEl.oninput = ()=>{ state.hwName = nameEl.value; };
-
-  const lg = wrap.querySelector('#hwLogin');
-  if(lg) lg.onclick = ()=>{ state.screen = 'auth'; render(); };
-
-  const go = wrap.querySelector('#hwStart');
-  if(go) go.onclick = ()=>{
-    if((!p || p.isGuest)){
-      const n = (state.hwName||'').trim();
-      if(n.length < 1){ toast('先写一下名字，不然老师不知道是谁交的。'); if(nameEl) nameEl.focus(); return; }
-    }
+  wrap.querySelector('#hwStart').onclick = ()=>{
     if(isGram) startGrammar(a); else startHomework(a);
   };
   wrap.querySelector('#hwSkip').onclick = ()=>{
     state.hw = null; clearHwFromUrl();
-    state.screen = state.profile ? 'dashboard' : 'auth';
+    state.screen = state.profile ? (state.profile.sid ? 'dashboard' : 'welcome') : 'auth';
     render();
   };
   return wrap;
 }
 
 function startHomework(a){
-  const p = state.profile;
-  const name = (p && !p.isGuest) ? p.username : (state.hwName||'').trim();
   // 题目顺序每人打乱，但题目本身是同一批
   const words = shuffle(a.words.slice());
   state.dictCfg = { ...state.dictCfg, hint: !!a.hint, sentCn: a.sentCn !== false };
   startDictation(words, a.mode, `作业 · ${a.title || a.code}`);
-  if(state.dict) state.dict.hw = { code: a.code, title: a.title, name };
+  if(state.dict) state.dict.hw = { code: a.code, title: a.title };
 }
 
 /* 学生进入作业：没有档案就先建一个访客档案，不让作业链接卡在登录页 */
@@ -7036,20 +6581,12 @@ async function openHomework(code, opts){
     if(!a){ if(!quiet) toast('没找到这个作业码，跟老师核对一下。'); return false; }
     const qs = hwType(a) === 'grammar' ? a.items : a.words;
     if(!qs || !qs.length){ if(!quiet) toast('这份作业没有题目，可能老师还没出完。'); return false; }
-    if(!state.profile){
-      const g = loadGuestProfile() || newGuestProfile();
-      g.isGuest = true;
-      setGuestActive(true); saveGuestProfile(g);
-      state.profile = migrateProfile(g);
-    }
-    if(!state.hwName && state.profile && state.profile.isGuest && state.profile.username !== '访客'){
-      state.hwName = state.profile.username;
-    }
+    if(!state.profile) state.profile = newGuestProfile();
     state.hw = a;
     state.screen = 'hwIntro';
     return true;
   }catch(err){
-    if(!quiet) toast('读取作业失败：' + friendlyDbError(err));
+    if(!quiet) toast(err.message || '读取作业失败，请重试。');
     return false;
   }
 }
@@ -7058,7 +6595,7 @@ function promptHomeworkCode(){
   const v = prompt('输入老师给的作业码（6 位字母数字）：');
   if(v === null) return;
   const code = cleanHwCode(v);
-  if(code.length < 4){ toast('作业码不太对，再核对一下。'); return; }
+  if(code.length < 6){ toast('作业码不太对，再核对一下。'); return; }
   openHomework(code).then(ok=>{ if(ok) render(); });
 }
 
@@ -7099,7 +6636,7 @@ function renderHwList(){
     state.hwEdit = null;              // 上次改到一半退出来的，别让它跟着新作业走
     state.hwDraft = {
       type: 'vocab',
-      title: '', due: '', requireLogin: false,
+      title: '', due: '',
       scope: 'unit', sid: (allSeries()[0]||{}).id, bi: 0, ui: 0,
       mode: 'audio', count: 20, hint: false, sentCn: true,
       gid: (GRAM_BANK[0]||{}).id, gcount: 'all'
@@ -7191,15 +6728,7 @@ function renderHwNewGram(){
           <label class="field-label">截止日期<span class="opt-tag">选填</span></label>
           <input type="date" id="hwDue" value="${esc(d.due)}">
         </div>
-        <div>
-          <label class="field-label">提交方式</label>
-          <div class="chip-row">
-            <button class="chip ${d.requireLogin?'':'chip-on'}" data-req="0">不用注册也能交</button>
-            <button class="chip ${d.requireLogin?'chip-on':''}" data-req="1">必须登录后交</button>
-          </div>
-          <p class="hw-note" style="margin-top:8px;">${d.requireLogin
-            ? '成绩会记到学生账号上，身份确定；但没注册的学生交不了。'
-            : '学生点链接填个名字就能做，交作业率最高；名字是自己填的，重名要留意。'}</p>
+        <div><p class="hw-note">已登录的学生会提交成绩，游客可当场查看结果。</p>
         </div>
       </div>
 
@@ -7215,7 +6744,6 @@ function renderHwNewGram(){
   due.onchange = ()=>{ d.due = due.value; };
   bindHwTypeChips(wrap, d);
   wrap.querySelectorAll('[data-gid]').forEach(b=>b.onclick = ()=>{ d.gid = b.dataset.gid; render(); });
-  wrap.querySelectorAll('[data-req]').forEach(b=>b.onclick = ()=>{ d.requireLogin = b.dataset.req === '1'; render(); });
   wrap.querySelector('#hwBack').onclick = ()=>{ state.hwEdit = null; state.screen = 'hwList'; render(); };
   wrap.querySelector('#hwCreate').onclick = ()=>createGrammarAssignment(wrap);
   return wrap;
@@ -7238,7 +6766,7 @@ async function createGrammarAssignment(wrap){
     type: 'grammar',
     gid: set.id,
     scopeLabel,
-    requireLogin: !!d.requireLogin,
+    requireLogin: true,
     due: d.due || null,
     open: ed ? ed.open !== false : true,
     items,
@@ -7342,15 +6870,7 @@ function renderHwNew(){
           <label class="field-label">截止日期<span class="opt-tag">选填</span></label>
           <input type="date" id="hwDue" value="${esc(d.due)}">
         </div>
-        <div>
-          <label class="field-label">提交方式</label>
-          <div class="chip-row">
-            <button class="chip ${d.requireLogin?'':'chip-on'}" data-req="0">不用注册也能交</button>
-            <button class="chip ${d.requireLogin?'chip-on':''}" data-req="1">必须登录后交</button>
-          </div>
-          <p class="hw-note" style="margin-top:8px;">${d.requireLogin
-            ? '成绩会记到学生账号上，身份确定；但没注册的学生交不了。'
-            : '学生点链接填个名字就能做，交作业率最高；名字是自己填的，重名要留意。'}</p>
+        <div><p class="hw-note">已登录的学生会提交成绩，游客可当场查看结果。</p>
         </div>
       </div>
 
@@ -7381,7 +6901,6 @@ function renderHwNew(){
   wrap.querySelectorAll('[data-count]').forEach(b=>b.onclick = ()=>upd(()=>{
     d.count = b.dataset.count === 'all' ? 'all' : +b.dataset.count;
   }));
-  wrap.querySelectorAll('[data-req]').forEach(b=>b.onclick = ()=>upd(()=>{ d.requireLogin = b.dataset.req === '1'; }));
   wrap.querySelector('#hwHint').onclick = ()=>upd(()=>{ d.hint = !d.hint; });
   const hwSentCn = wrap.querySelector('#hwSentCn');
   if(hwSentCn) hwSentCn.onclick = ()=>upd(()=>{ d.sentCn = d.sentCn === false; });
@@ -7422,7 +6941,7 @@ async function createAssignment(wrap){
     title: (d.title || '').trim() || scopeLabel,
     mode: d.mode, hint: !!d.hint, sentCn: d.sentCn !== false,
     scopeLabel,
-    requireLogin: !!d.requireLogin,
+    requireLogin: true,
     due: d.due || null,
     open: ed ? ed.open !== false : true,
     words,
@@ -7640,7 +7159,7 @@ function startHwEdit(a, done){
   const isGram = hwType(a) === 'grammar';
   const d = {
     type: isGram ? 'grammar' : 'vocab',
-    title: a.title || '', due: a.due || '', requireLogin: !!a.requireLogin,
+    title: a.title || '', due: a.due || '',
     scope: 'unit', sid: (allSeries()[0]||{}).id, bi: 0, ui: 0,
     mode: a.mode || 'audio', count: (a.words ? a.words.length : 20),
     hint: !!a.hint, sentCn: a.sentCn !== false,
@@ -7765,8 +7284,10 @@ function withTimeout(promise, ms, fallback){
 async function loadCustomBooks(){
   let cloud = [];
   try{
-    const snap = await withTimeout(db.collection('books').get(), 4000, null);
-    if(snap) cloud = snap.docs.map(d=>d.data());
+    if(TEACHER_MODE){
+      const snap = await withTimeout(db.collection('books').get(), 4000, null);
+      if(snap) cloud = snap.docs.map(d=>d.data());
+    } else cloud = await api('books');
   }catch(e){ /* 没有权限或没这个集合都不影响使用，退回本地 */ }
   const local = loadLocalCustom();
   const byId = {};
@@ -7932,85 +7453,72 @@ function renderImportBook(){
 /* =========================================================
    启动
    ========================================================= */
-(function boot(){
-  render();                       // 先画一个"载入中"
+async function loadStudentPage(){
+  const { profile, version } = await api('session');
+  const code = readHwCodeFromUrl();
+  if(profile){
+    studentVersion = version;
+    await enterAppWithProfile(profile);
+    void flushPendingHw(profile.uid);
+    if(state.hw) state.screen = 'hwIntro';
+  } else state.screen = 'auth';
+  if(code) await openHomework(code);
+  render();
+  loadCustomBooks().then(()=>{ if(CUSTOM.length && ['auth', 'welcome', 'dashboard', 'hwIntro'].includes(state.screen)) render(); });
+}
 
-  /* 作业链接：#hw=XXXXXX。不管学生是登录状态、访客还是第一次来，
-     只要带着作业码进来，最后都要落到作业页，不能把人扔在登录页上。 */
-  const PENDING_HW = readHwCodeFromUrl();
-  let hwTried = false;
-  async function tryOpenPendingHw(){
-    if(!PENDING_HW || hwTried) return false;
-    hwTried = true;
-    if(state.teacherProfile) return false;     // 老师点自己发的链接：留在教师视图
-    const ok = await openHomework(PENDING_HW);
-    clearHwFromUrl();
-    render();
-    return ok;
-  }
-  // 上次没交上去的作业，联网后补交
-  setTimeout(()=>{ flushPendingHw(); }, 2000);
-
-  // Google 跳转登录回来时，先把结果接住
-  async function handleRedirectResult(){
-    if(!CLOUD_OK) return false;
-    let pending = false;
-    try{ pending = sessionStorage.getItem('nelc_google_redirect') === '1'; }catch(e){}
+function showStudentLink(token){
+  const root = document.querySelector('#app');
+  const wrap = document.createElement('div');
+  wrap.className = 'card auth-wrap';
+  wrap.innerHTML = `<h2>登录学生账号</h2><p>请在之后做作业的同一个微信浏览器中登录。</p>
+    <button class="btn btn-primary" id="redeemLink">确认登录</button><p role="status"></p>
+    <a href="/vocab/">返回练习</a>`;
+  root.replaceChildren(wrap);
+  const button = wrap.querySelector('button');
+  button.onclick = async ()=>{
+    button.disabled = true;
+    const status = wrap.querySelector('[role="status"]');
     try{
-      const res = await auth.getRedirectResult();
-      try{ sessionStorage.removeItem('nelc_google_redirect'); }catch(e){}
-      if(res && res.user) return true;       // 交给 onAuthStateChanged 走正常流程
-      if(pending){
-        state.errorMsg = 'Google 登录没有完成 —— 可能中途取消了，或者当前网址还没在 Firebase 里授权。';
-      }
-    }catch(err){
-      try{ sessionStorage.removeItem('nelc_google_redirect'); }catch(e){}
-      state.errorMsg = friendlyAuthError(err);
+      await api('session/redeem', { token });
+      history.replaceState(null, '', location.pathname + location.search);
+    }catch(error){
+      status.textContent = error.message || '无法连接，请重试。';
+      button.disabled = false;
+      return;
     }
-    return false;
-  }
-  handleRedirectResult();
+    boot();
+  };
+}
 
-  // 没有登录账号时该去哪：上次在用访客模式就直接接着练，否则回登录页
-  function resolveNoUser(){
-    if(state.screen !== 'boot') return;
-    const g = guestActive() ? loadGuestProfile() : null;
-    if(g){ g.isGuest = true; enterAppWithProfile(g); }   // 访客不会是教师，不用等
-    else state.screen = 'auth';
-    tryOpenPendingHw();                                  // 带作业码进来的，最后落到作业页
-  }
-
-  // 兜底先挂上：不管云端有没有回应，都不会卡在载入页
-  setTimeout(()=>{ resolveNoUser(); render(); }, 3500);
-
-  // 自定义词书是可选内容，后台加载，不挡住登录
-  loadCustomBooks().then(()=>{ if(CUSTOM.length && state.screen !== 'boot') render(); });
-
-  // 云端根本没起来（断网 / CDN 被挡）：不用等，直接按本地状态进入
-  if(!CLOUD_OK){ resolveNoUser(); render(); return; }
-
-  // 刷新页面不再掉登录：等 Firebase 恢复会话后再决定画哪个界面
-  let settled = false;
-  auth.onAuthStateChanged(async user=>{
-    if(settled && !user){ return; }
-    settled = true;
-    if(user){
-      try{
-        const base = (user.email || '').split('@')[0] || 'student';
-        const p = await fetchProfile(user.uid, base);
-        setGuestActive(false);
-        await enterAppWithProfile(p);      // 教师账号会被自动分流到教师视图
-        await tryOpenPendingHw();
-      }catch(e){
-        state.screen = 'auth';
-        state.errorMsg = '读取账号数据失败，请重新登录。';
-      }
-    } else {
-      resolveNoUser();
+async function boot(){
+  try{
+    localStorage.removeItem('nelc_guest_profile');
+    localStorage.removeItem('nelc_guest_active');
+    localStorage.removeItem('nelc_hw_pending');
+  }catch{}
+  state.screen = 'boot';
+  render();
+  try{
+    if(TEACHER_MODE){
+      await initTeacherFirebase();
+      const user = await new Promise((resolve, reject)=>auth.onAuthStateChanged(resolve, reject));
+      if(user) await signInTeacher(user);
+      else state.screen = 'auth';
+      render();
+      loadCustomBooks();
+      return;
     }
+    const token = new URLSearchParams(location.hash.slice(1)).get('login');
+    if(token){ showStudentLink(token); return; }
+    await loadStudentPage();
+  }catch(error){
+    state.screen = 'auth';
+    state.errorMsg = error.message || '连接失败，请重新打开链接。';
     render();
-  });
-})();
+  }
+}
+boot();
 
 </script>
 </body>

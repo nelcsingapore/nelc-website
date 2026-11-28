@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isTeacher() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    // Student API uses the Cloud Run service account. Browser permissions
+    // are limited to the existing teacher console and its username lookup.
+    match /users/{uid} {
+      allow read: if isTeacher();
+    }
+
+    match /usernames/{username} {
+      allow get: if true;
+    }
+
+    match /books/{bookId} {
+      allow read, write: if isTeacher();
+    }
+
+    match /assignments/{code} {
+      allow read, write: if isTeacher();
+
+      match /submissions/{uid} {
+        allow read, delete: if isTeacher();
+      }
+    }
+  }
+}
